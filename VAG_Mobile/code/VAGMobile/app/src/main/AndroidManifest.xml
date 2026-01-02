@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Base.Theme.Vagmobile"
+        android:usesCleartextTraffic="true"
+        android:enableOnBackInvokedCallback="true">
+
+        <activity
+            android:name=".ui.activity.MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".ui.activity.LoginActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.activity.RegisterActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.activity.ProfileActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.activity.ArtworkDetailActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.activity.ArtworkListActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.activity.CreateArtworkActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.activity.EditArtworkActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.activity.CategoryActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.activity.AdminCategoriesActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.activity.AdminArtworksActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.activity.CategoryDetailActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.activity.AdminArtworkDetailActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.activity.AdminArtworksActivity" />
+
+        <activity
+            android:name=".ui.activity.LikedArtworksActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.activity.ArtistsActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.activity.ArtistArtworksActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.activity.EditProfileActivity"
+            android:exported="false"/>
+
+
+        <!-- ДОБАВЛЕНО: Exhibition Activities -->
+        <activity
+            android:name=".ui.activity.ExhibitionListActivity"
+            android:exported="false"/>
+
+        <activity
+            android:name=".ui.activity.ExhibitionDetailActivity"
+            android:exported="false"/>
+
+        <activity
+            android:name=".ui.activity.CreateExhibitionActivity"
+            android:exported="false"/>
+
+        <activity
+            android:name=".ui.activity.AddArtworkToExhibitionActivity"
+            android:exported="false"/>
+
+        <activity
+            android:name=".ui.activity.FullscreenImageActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.NoActionBar" />
+
+    </application>
+
+</manifest>

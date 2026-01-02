@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title>Публикации - Виртуальная арт-галерея</title>
+    <link rel="stylesheet" th:href="@{/resources/css/style.css}">
+</head>
+<body>
+<div th:replace="fragments/header :: header"></div>
+
+<div class="container">
+    <h1>Публикации</h1>
+
+    <div sec:authorize="isAuthenticated()" class="create-artwork-btn">
+        <a th:href="@{/artwork/create}" class="btn btn-primary">Создать новую публикацию</a>
+    </div>
+
+    <div class="artwork-grid">
+        <div th:each="artwork : ${artworks.content}" class="artwork-card">
+            <a th:href="@{/artwork/details/{id}(id=${artwork.id})}">
+                <img th:src="@{'/uploads/' + ${#strings.replace(artwork.imagePath, ' ', '%20')}}"/>
+                <h3 th:text="${artwork.title}"></h3>
+            </a>
+            <p>Автор:
+                <span th:if="${artwork.user != null}"
+                      th:text="${artwork.user.username}">
+                </span>
+
+            <p th:if="${artwork.categories != null and !artwork.categories.isEmpty()}">
+                Категории:
+                <span th:each="category, iterStat : ${artwork.categories}"
+                      th:text="${category.name + (iterStat.last ? '' : ', ')}">
+    </span>
+            </p>
+
+            <p th:text="${artwork.likes} + ' лайков'"></p>
+        </div>
+    </div>
+
+    <div th:replace="fragments/pagination :: pagination(${artworks}, '/artwork/list')"></div>
+</div>
+
+<div th:replace="fragments/footer :: footer"></div>
+</body>
+</html>

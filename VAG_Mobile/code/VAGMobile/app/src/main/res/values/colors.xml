@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Material 3 Color Scheme -->
+    <!-- 1. Цвет меню навигации, заголовка активности -->
+    <color name="navigation_header">#B69DF8</color>
+    <!-- 2. Цвет заднего фона -->
+    <color name="background_primary">#EADFFF</color>
+    <!-- 3. Цвет акцента -->
+    <color name="accent_primary">#6750A4</color>
+    <!-- 4. Инверсивный цвет акцента -->
+    <color name="accent_inverse">#D0BCFF</color>
+    <!-- 5. Цвет полей и фона элементов -->
+    <color name="surface_primary">#FEF7FF</color>
+    <!-- 6. Цвет on secondary -->
+    <color name="on_secondary">#4A4459</color>
+    <!-- 7. Светлый on secondary -->
+    <color name="on_secondary_light">#79747E</color>
+    <!-- 8. Цвет текста -->
+    <color name="text_primary">#1D1B20</color>
+
+    <!-- Legacy colors for backward compatibility -->
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="gray">#808080</color>
+    <color name="red">#FFFF0000</color>
+    <color name="primary_color">#2196F3</color>
+    <color name="card_background">#FFFFFF</color>
+    <color name="chip_background_color">#E3F2FD</color>
+    <color name="chip_stroke_color">#2196F3</color>
+    <color name="status_pending">#FFA500</color>
+    <color name="status_approved">#4CAF50</color>
+    <color name="status_rejected">#F44336</color>
+    <color name="unified_light_color">#E3F2FD</color>
+</resources>

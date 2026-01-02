@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Основные строки -->
+    <string name="app_name">Арт-галерея</string>
+
+    <!-- Навигация -->
+    <string name="nav_home">Главная</string>
+    <string name="nav_gallery">Галерея</string>
+    <string name="nav_categories">Категории</string>
+    <string name="nav_artists">Художники</string>
+    <string name="nav_profile">Профиль</string>
+
+    <!-- Кнопки -->
+    <string name="login">Войти</string>
+    <string name="register">Регистрация</string>
+    <string name="logout">Выйти</string>
+    <string name="create_artwork">Создать публикацию</string>
+
+    <!-- Сообщения -->
+    <string name="login_required">Пожалуйста, войдите в систему</string>
+    <string name="loading">Загрузка...</string>
+    <string name="no_data">Нет данных</string>
+
+    <!-- Профиль -->
+    <string name="profile">Профиль</string>
+    <string name="view_profile">Просмотреть профиль</string>
+    <string name="liked_artworks">Понравившиеся публикации</string>
+    <string name="documentation">Документация</string>
+    <string name="administration">Администрирование</string>
+    <string name="manage_categories">Управление категориями</string>
+    <string name="moderate_artworks">Модерация публикаций</string>
+    <string name="not_logged_in">Вы не авторизованы</string>
+    <string name="login_to_access">Войдите в систему для доступа ко всем функциям</string>
+
+    <!-- Публикации -->
+    <string name="artworks">Публикации</string>
+    <string name="title">Название</string>
+    <string name="description">Описание</string>
+    <string name="artist">Художник</string>
+    <string name="likes">лайков</string>
+    <string name="views">просмотров</string>
+    <string name="status">Статус</string>
+    <string name="categories">Категории</string>
+    <string name="comments">Комментарии</string>
+    <string name="add_comment">Добавить комментарий</string>
+
+    <!-- Категории -->
+    <string name="category">Категория</string>
+    <string name="artworks_count">публикаций</string>
+
+    <!-- Художники -->
+    <string name="artists">Художники</string>
+    <string name="publications">публикации</string>
+    <string name="no_publications">Нет публикаций</string>
+
+    <!-- Сообщения успеха -->
+    <string name="registration_successful">Регистрация успешна</string>
+    <string name="login_successful">Вход выполнен успешно</string>
+    <string name="login_failed">Ошибка входа</string>
+    <string name="login_failed_invalid_response">Ошибка входа: неверный ответ сервера</string>
+    <string name="artwork_created_successfully">Публикация создана успешно!</string>
+    <string name="artwork_updated_successfully">Публикация обновлена успешно!</string>
+    <string name="artwork_approved_successfully">Публикация одобрена успешно</string>
+    <string name="artwork_rejected_successfully">Публикация отклонена успешно</string>
+    <string name="category_created_successfully">Категория создана успешно</string>
+    <string name="category_updated_successfully">Категория обновлена успешно</string>
+    <string name="category_deleted_successfully">Категория удалена успешно</string>
+
+    <!-- Сообщения об ошибках -->
+    <string name="failed_to_load_artworks">Не удалось загрузить публикации: %s</string>
+    <string name="failed_to_load_artists">Не удалось загрузить художников: %s</string>
+    <string name="failed_to_load_exhibitions">Не удалось загрузить выставки: %s</string>
+    <string name="failed_to_load_categories">Не удалось загрузить категории: %s</string>
+    <string name="failed_to_load_liked_artworks">Не удалось загрузить понравившиеся публикации: %s</string>
+    <string name="failed_to_approve_artwork">Не удалось одобрить публикацию: %s</string>
+    <string name="failed_to_reject_artwork">Не удалось отклонить публикацию: %s</string>
+    <string name="failed_to_create_category">Не удалось создать категорию: %s</string>
+    <string name="failed_to_update_category">Не удалось обновить категорию: %s</string>
+    <string name="failed_to_delete_category">Не удалось удалить категорию: %s</string>
+    <string name="failed_to_load_artwork">Не удалось загрузить публикацию: %s</string>
+    <string name="failed_to_create_artwork">Не удалось создать публикацию: %s</string>
+    <string name="failed_to_update_artwork">Не удалось обновить публикацию: %s</string>
+    <string name="failed_to_process_image_file">Не удалось обработать файл изображения</string>
+    <string name="failed_to_parse_categories">Не удалось разобрать категории</string>
+    <string name="no_data_received">Данные не получены</string>
+    <string name="network_error">Ошибка сети</string>
+    <string name="authentication_required">Требуется аутентификация</string>
+    <string name="invalid_password">Неверный пароль</string>
+    <string name="access_denied">Доступ запрещен</string>
+
+    <!-- Валидация -->
+    <string name="please_fill_all_fields">Пожалуйста, заполните все поля</string>
+    <string name="passwords_do_not_match">Пароли не совпадают</string>
+    <string name="password_must_be_at_least_6_characters">Пароль должен содержать минимум 6 символов</string>
+    <string name="please_select_an_image">Пожалуйста, выберите изображение</string>
+    <string name="please_select_at_least_one_category">Пожалуйста, выберите хотя бы одну категорию</string>
+    <string name="please_enter_category_name">Пожалуйста, введите название категории</string>
+    <string name="category_already_selected">Категория уже выбрана</string>
+    <string name="artwork_id_not_available">ID публикации недоступен</string>
+    <string name="artist_not_found">Художник не найден</string>
+
+    <!-- Действия -->
+    <string name="image_selected">Изображение выбрано</string>
+    <string name="image_selection_cancelled">Выбор изображения отменен</string>
+    <string name="loaded_categories">Загружено %d категорий</string>
+    <string name="added_category">Добавлено: %s</string>
+    <string name="removed_category">Удалено: %s</string>
+    <string name="error_message">Ошибка: %s</string>
+
+    <!-- Отладочные сообщения -->
+    <string name="loaded_featured_artworks">Загружено %d популярных публикаций</string>
+    <string name="loaded_featured_artists">Загружено %d популярных художников</string>
+    <string name="loaded_featured_exhibitions">Загружено %d популярных выставок</string>
+
+    <!-- Названия активностей и экранов -->
+    <string name="screen_artworks">Публикации</string>
+    <string name="screen_categories">Категории</string>
+    <string name="screen_create_artwork">Создать публикацию</string>
+    <string name="screen_edit_artwork">Редактировать публикацию</string>
+    <string name="screen_admin_categories">Управление категориями</string>
+    <string name="screen_admin_artworks">Управление публикациями</string>
+    <string name="screen_liked_artworks">Понравившиеся публикации</string>
+    <string name="screen_login">Вход</string>
+    <string name="screen_register">Регистрация</string>
+
+    <!-- Плейсхолдеры и подсказки -->
+    <string name="hint_enter_title">Введите название</string>
+    <string name="hint_enter_description">Введите описание</string>
+    <string name="hint_enter_category_name">Введите название категории</string>
+    <string name="hint_username">Имя пользователя</string>
+    <string name="hint_email">Email</string>
+    <string name="hint_password">Пароль</string>
+    <string name="hint_confirm_password">Подтвердите пароль</string>
+
+    <!-- Кнопки -->
+    <string name="btn_create">Создать</string>
+    <string name="btn_update">Обновить</string>
+    <string name="btn_delete">Удалить</string>
+    <string name="btn_approve">Одобрить</string>
+    <string name="btn_reject">Отклонить</string>
+    <string name="btn_edit">Редактировать</string>
+    <string name="btn_save">Сохранить</string>
+    <string name="btn_cancel">Отмена</string>
+    <string name="btn_select_image">Выбрать изображение</string>
+    <string name="btn_add">Добавить</string>
+    <string name="btn_remove">Удалить</string>
+
+    <!-- Диалоговые окна -->
+    <string name="dialog_add_category">Добавить категорию</string>
+    <string name="dialog_edit_category">Редактировать категорию</string>
+    <string name="dialog_delete_category">Удалить категорию</string>
+    <string name="dialog_delete_artwork">Удалить публикацию</string>
+    <string name="dialog_confirm_delete">Подтвердить удаление</string>
+    <string name="confirm_delete_category">Вы уверены, что хотите удалить категорию \'%s\'?</string>
+    <string name="no_title">Без названия</string>
+
+    <!-- Диалоговые окна выставок -->
+    <string name="dialog_edit_exhibition">Редактирование выставки</string>
+    <string name="dialog_delete_exhibition">Удаление выставки</string>
+    <string name="dialog_add_artwork">Добавить работу</string>
+    <string name="dialog_remove_artwork_from_exhibition">Удаление работы из выставки</string>
+    <string name="confirm_delete_exhibition">Вы действительно хотите удалить выставку "%s"? Это действие нельзя отменить.</string>
+    <string name="confirm_remove_artwork_from_exhibition">Вы действительно хотите удалить работу "%s" из выставки "%s"?</string>
+    <string name="confirm_delete_artwork">Вы действительно хотите удалить публикацию "%s"? Это действие нельзя отменить.</string>
+
+    <!-- Метки и заголовки -->
+    <string name="artwork_image">Изображение публикации</string>
+    <string name="select_from_available_categories">Выберите из доступных категорий</string>
+</resources>

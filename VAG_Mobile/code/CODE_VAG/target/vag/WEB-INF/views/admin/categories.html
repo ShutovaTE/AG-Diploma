@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <title>Управление категорий - Виртуальная арт-галерея</title>
+    <link rel="stylesheet" th:href="@{/resources/css/style.css}">
+</head>
+<body>
+<div th:replace="fragments/header :: header"></div>
+
+<div class="container">
+    <h1>Управление категорий</h1>
+
+    <div th:if="${param.created}" class="alert alert-success">
+        Категория была успешно создана.
+    </div>
+
+    <div th:if="${param.updated}" class="alert alert-success">
+        Категория была успешно обновлена.
+    </div>
+
+    <div th:if="${param.deleted}" class="alert alert-success">
+        Категория была удалена.
+    </div>
+
+    <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+    <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+
+    <div class="action-button-wrapper">
+        <a th:href="@{/admin/categories/create}" class="btn btn-primary">Создать новую категорию</a>
+    </div>
+
+    <div class="admin-category-list">
+        <div th:each="category : ${categories}" class="list-item">
+            <div class="list-item-content">
+                <h3 th:text="${category.name}"></h3>
+                <p class="item-description" th:text="${category.description}"></p>
+                <p class="item-count" th:text="${category.approvedArtworksCount} + ' одобренных работ'"></p>
+                
+                <div class="item-actions" sec:authorize="hasRole('ADMIN')">
+                    <a th:href="@{/admin/categories/edit/{id}(id=${category.id})}" class="btn btn-edit">Редактировать</a>
+                    <form th:action="@{/admin/categories/delete/{id}(id=${category.id})}" method="post">
+                        <button type="submit" class="btn btn-delete">Удалить</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="fragments/pagination :: pagination(${categories}, '/admin/categories')"></div>
+
+</div>
+
+<div th:replace="fragments/footer :: footer"></div>
+</body>
+</html>

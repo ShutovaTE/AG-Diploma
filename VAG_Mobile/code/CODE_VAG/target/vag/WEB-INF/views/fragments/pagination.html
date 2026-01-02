@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+    <div th:fragment="pagination(page, url)" class="pagination">
+        <!-- Отображаем элементы пагинации, только если есть несколько страниц -->
+        <div th:if="${page.totalPages > 1}">
+            <a th:if="${page.hasPrevious()}"
+               th:href="@{${url}(page=${page.number - 1}, size=${page.size})}"
+               class="pagination-arrow" title="Предыдущая страница">&laquo;</a>
+
+            <th:block th:with="currentPage=${page.number + 1},
+                               totalPages=${page.totalPages},
+                               maxVisible=5">
+
+                <th:block th:if="${totalPages <= maxVisible}">
+                    <th:block th:each="i : ${#numbers.sequence(1, totalPages)}">
+                        <a th:if="${i != currentPage}"
+                           th:href="@{${url}(page=${i - 1}, size=${page.size})}"
+                           th:text="${i}"></a>
+                        <span th:if="${i == currentPage}"
+                              class="current-page"
+                              th:text="${i}"></span>
+                    </th:block>
+                </th:block>
+
+                <th:block th:if="${totalPages > maxVisible}">
+                    <th:block th:if="${currentPage != 1}">
+                        <a th:href="@{${url}(page=0, size=${page.size})}" th:text="1"></a>
+                    </th:block>
+                    <th:block th:if="${currentPage == 1}">
+                        <span class="current-page" th:text="1"></span>
+                    </th:block>
+
+                    <th:block th:if="${currentPage > 3}">
+                        <span class="pagination-ellipsis">...</span>
+                    </th:block>
+
+                    <th:block th:with="
+                        startPage=${currentPage <= 3 ? 2 : (currentPage >= totalPages - 2 ? totalPages - 4 : currentPage - 1)},
+                        endPage=${currentPage <= 3 ? (totalPages < 6 ? totalPages - 1 : 5) : (currentPage >= totalPages - 2 ? totalPages - 1 : currentPage + 1)}">
+
+                        <th:block th:if="${startPage <= endPage && startPage >= 2}">
+                            <th:block th:each="i : ${#numbers.sequence(startPage, endPage)}">
+                                <th:block th:if="${i != 1 && i != totalPages}">
+                                    <a th:if="${i != currentPage}"
+                                       th:href="@{${url}(page=${i - 1}, size=${page.size})}"
+                                       th:text="${i}"></a>
+                                    <span th:if="${i == currentPage}"
+                                          class="current-page"
+                                          th:text="${i}"></span>
+                                </th:block>
+                            </th:block>
+                        </th:block>
+                    </th:block>
+
+                    <th:block th:if="${currentPage < totalPages - 2}">
+                        <span class="pagination-ellipsis">...</span>
+                    </th:block>
+
+                    <th:block th:if="${currentPage != totalPages}">
+                        <a th:href="@{${url}(page=${totalPages - 1}, size=${page.size})}" th:text="${totalPages}"></a>
+                    </th:block>
+                    <th:block th:if="${currentPage == totalPages}">
+                        <span class="current-page" th:text="${totalPages}"></span>
+                    </th:block>
+                </th:block>
+            </th:block>
+
+            <a th:if="${page.hasNext()}"
+               th:href="@{${url}(page=${page.number + 1}, size=${page.size})}"
+               class="pagination-arrow" title="Следующая страница">&raquo;</a>
+        </div>
+        <!-- Сообщение, если только одна страница -->
+        <div th:if="${page.totalPages <= 1}" class="pagination-info">
+            <span th:if="${!page.empty}">Страница 1 из 1</span>
+            <span th:if="${page.empty}">Нет данных для отображения</span>
+        </div>
+    </div>
+</body>
+</html>

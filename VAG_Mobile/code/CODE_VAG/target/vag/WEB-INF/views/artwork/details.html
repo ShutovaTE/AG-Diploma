@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${artwork.title} + ' - Виртуальная арт-галерея'"></title>
+    <link rel="stylesheet" th:href="@{/resources/css/style.css}">
+</head>
+<body>
+<div th:replace="fragments/header :: header"></div>
+
+<div class="container artwork-details">
+    <!-- Изображение на весь экран вверху -->
+    <div class="artwork-image">
+        <img th:src="@{/uploads/{path}(path=${artwork.imagePath})}" id="artwork-img" onclick="openFullscreen(this)"/>
+    </div>
+
+    <!-- Модальное окно для полноэкранного просмотра -->
+    <div id="fullscreen-modal" class="fullscreen-modal">
+        <span class="close-modal" onclick="closeFullscreen()">&times;</span>
+        <img id="fullscreen-img" class="fullscreen-content">
+    </div>
+
+    <!-- Обертка для контента под изображением -->
+    <div class="artwork-content-wrapper">
+        <!-- Левая колонка с информацией -->
+        <div class="artwork-info-container">
+            <div class="artwork-header">
+                <h1 th:text="${artwork.title}"></h1>
+                <p>Автор: <a th:href="@{/user/profile/{id}(id=${artwork.user.id})}"
+                      th:text="${artwork.user.username}"></a></p>
+                <p>Категории:
+                    <span th:each="category, iterStat : ${artwork.categories}"
+                          th:text="${category.name + (iterStat.last ? '' : ', ')}">
+                    </span>
+                </p>
+                <p th:text="${artwork.likes} + ' лайков'"></p>
+                <div th:if="${isAuthenticated and artwork.status == 'APPROVED'}">
+                    <form th:action="@{/artwork/like/{id}(id=${artwork.id})}" method="post" th:if="${!isLiked}">
+                        <button type="submit" class="btn btn-like">Нравится</button>
+                    </form>
+                    <form th:action="@{/artwork/unlike/{id}(id=${artwork.id})}" method="post" th:unless="${!isLiked}">
+                        <button type="submit" class="btn btn-unlike">Не нравится</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="artwork-description">
+                <p th:text="${artwork.description}"></p>
+            </div>
+
+            <div th:unless="${isAuthenticated}" class="login-prompt">
+                <a th:href="@{/auth/login}" class="btn btn-primary">Войдите, чтобы оценить</a>
+            </div>
+        </div>
+
+        <!-- Правая колонка с комментариями -->
+        <div class="comments-section">
+            <h2>Комментарии</h2>
+
+            <div th:if="${isAuthenticated and artwork.status == 'APPROVED'}" class="add-comment">
+                <form th:action="@{/artwork/comment/{id}(id=${artwork.id})}" method="post">
+                    <textarea name="content" placeholder="Добавьте комментарий..." required></textarea>
+                    <button type="submit" class="btn btn-primary">Отправить</button>
+                </form>
+            </div>
+            <div th:unless="${isAuthenticated}" class="add-comment">
+                <a th:href="@{/auth/login}" class="btn btn-primary">Войдите, чтобы комментировать</a>
+            </div>
+            <div th:if="${isAuthenticated and artwork.status != 'APPROVED'}" class="add-comment">
+                <p class="help-text">Комментарии недоступны для публикаций, ожидающих проверки или отклоненных</p>
+            </div>
+
+            <div th:if="${not #lists.isEmpty(artwork.comments)}" class="comments-list">
+                <div th:each="comment : ${artwork.comments}" class="comment">
+                    <div class="comment-header">
+                        <a th:href="@{/user/profile/{id}(id=${comment.user.id})}"
+                        th:text="${comment.user.username}"></a>
+                        <span class="comment-date"
+                            th:text="${comment.dateCreated != null} ?
+                            ${#temporals.format(comment.dateCreated, 'dd MMM yyyy HH:mm')} :
+                            'Дата недоступна'"></span>
+                    </div>
+                    <div class="comment-content" th:text="${comment.content}"></div>
+                </div>
+            </div>
+
+            <div th:if="${#lists.isEmpty(artwork.comments)}" class="no-comments">
+                Нет комментариев
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="fragments/footer :: footer"></div>
+
+<script>
+    // Функции для работы с полноэкранным просмотром изображений
+    function openFullscreen(img) {
+        const modal = document.getElementById("fullscreen-modal");
+        const fullscreenImg = document.getElementById("fullscreen-img");
+
+        modal.style.display = "block";
+        fullscreenImg.src = img.src;
+
+        // Добавляем обработчик нажатия клавиши Escape
+        document.addEventListener('keydown', handleEscKeyPress);
+    }
+
+    function closeFullscreen() {
+        document.getElementById("fullscreen-modal").style.display = "none";
+
+        // Удаляем обработчик нажатия клавиши Escape
+        document.removeEventListener('keydown', handleEscKeyPress);
+    }
+
+    function handleEscKeyPress(event) {
+        if (event.key === "Escape") {
+            closeFullscreen();
+        }
+    }
+</script>
+</body>
+</html>

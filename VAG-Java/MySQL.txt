@@ -1,0 +1,16 @@
+INSERT INTO roles (name) VALUES 
+('ADMIN'),
+('ARTIST')
+ON DUPLICATE KEY UPDATE name = VALUES(name);
+
+INSERT INTO users (username, password, email, role_id) 
+VALUES (
+    'admin',
+    '$2a$10$5A8hQiCyHGxdQjfjCNzODODOGOx4kd0k0h6j/ojXFHCLhEYdV.lQq', – пароль: admin123
+    'admin@vag.com',
+    (SELECT id FROM roles WHERE name = 'ADMIN')
+)
+ON DUPLICATE KEY UPDATE 
+    password = VALUES(password),
+    email = VALUES(email),
+    role_id = VALUES(role_id);

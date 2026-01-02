@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title>Виртуальная арт-галерея</title>
+    <link rel="stylesheet" th:href="@{/resources/css/style.css}">
+</head>
+<body>
+<div th:replace="fragments/header :: header"></div>
+
+<div class="container">
+    <h1>Добро пожаловать в виртуальную арт-галерею</h1>
+
+    <div class="featured-section">
+        <h2><a th:href="@{/artwork/list}" style="text-decoration: none; color: inherit;">Публикации</a></h2>
+        <div class="artwork-grid">
+            <div th:each="artwork : ${randomArtworks}" class="artwork-card">
+                <a th:href="@{/artwork/details/{id}(id=${artwork.id})}">
+                    <img th:if="${artwork.imagePath != null}" th:src="@{'/uploads/' + ${#strings.replace(artwork.imagePath, ' ', '%20')}}" alt="Artwork image">
+                    <div th:unless="${artwork.imagePath != null}" class="placeholder-image">Нет изображения</div>
+                    <h3 th:text="${artwork.title}"></h3>
+                </a>
+                <p>Автор: <a th:href="@{/user/profile/{id}(id=${artwork.user.id})}" th:text="${artwork.user.username}"></a></p>
+                <p th:if="${artwork.categories != null and !artwork.categories.isEmpty()}">
+                    Категории:
+                    <span th:each="category, iterStat : ${artwork.categories}"
+                          th:text="${category.name + (iterStat.last ? '' : ', ')}">
+                    </span>
+                </p>
+                <p th:text="${artwork.likes} + ' лайков'"></p>
+            </div>
+        </div>
+    </div>
+
+    <div class="featured-section">
+        <h2><a th:href="@{/exhibition/list}" style="text-decoration: none; color: inherit;">Выставки</a></h2>
+        <div class="exhibition-grid">
+            <div th:each="exhibition : ${randomExhibitions}" class="exhibition-card">
+                <a th:href="@{/exhibition/details/{id}(id=${exhibition.id})}">
+                    <div class="exhibition-image">
+                        <img th:if="${#authorization.expression('isAuthenticated()') and #authentication.name == exhibition.user.username and exhibition.artworks.size() > 0}"
+                             th:src="@{/uploads/{path}(path=${exhibition.artworks[0].imagePath})}"
+                             alt="Изображение выставки">
+                        <img th:if="${not (#authorization.expression('isAuthenticated()') and #authentication.name == exhibition.user.username) and exhibition.artworks.?[status == 'APPROVED'].size() > 0}"
+                             th:src="@{/uploads/{path}(path=${exhibition.artworks.?[status == 'APPROVED'][0].imagePath})}"
+                             alt="Изображение выставки">
+                        <div th:unless="${(#authorization.expression('isAuthenticated()') and #authentication.name == exhibition.user.username and exhibition.artworks.size() > 0) or (exhibition.artworks.?[status == 'APPROVED'].size() > 0)}"
+                             class="placeholder-image">Нет работ</div>
+                    </div>
+                    <h3 th:text="${exhibition.title}"></h3>
+                </a>
+                <p>Автор: <a th:href="@{/user/profile/{id}(id=${exhibition.user.id})}" th:text="${exhibition.user.username}"></a></p>
+                <p th:text="${exhibition.authorOnly ? 'Приватная' : 'Публичная'}"></p>
+                <p th:text="${#authorization.expression('isAuthenticated()') and #authentication.name == exhibition.user.username ? exhibition.artworks.size() : exhibition.artworks.?[status == 'APPROVED'].size()} + ' работ'"></p>
+            </div>
+        </div>
+    </div>
+
+    <div class="featured-section">
+        <h2><a th:href="@{/user/list}" style="text-decoration: none; color: inherit;">Художники</a></h2>
+        <div class="user-grid">
+            <div th:each="artist : ${randomArtists}" class="user-card">
+                <a th:href="@{/user/profile/{id}(id=${artist.id})}">
+                    <div class="user-info">
+                        <h3 th:text="${artist.username}"></h3>
+                        <p>Одобренных работ: <span th:text="${artist.artworks.?[status == 'APPROVED'].size()}"></span></p>
+                        <p>Выставок: <span th:text="${artist.exhibitions.size()}"></span></p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="fragments/footer :: footer"></div>
+</body>
+</html>

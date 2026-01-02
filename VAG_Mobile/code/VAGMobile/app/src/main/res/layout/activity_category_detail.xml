@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- Заголовок и описание категории -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/card_background"
+        android:padding="16dp"
+        android:layout_marginBottom="16dp">
+
+        <TextView
+            android:id="@+id/tvCategoryName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Category Name"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="#333" />
+
+        <TextView
+            android:id="@+id/tvCategoryDescription"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Category Description"
+            android:textSize="14sp"
+            android:textColor="#666"
+            android:layout_marginTop="8dp"
+            android:lineSpacingExtra="4dp" />
+
+        <TextView
+            android:id="@+id/tvArtworksCount"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="0 публикаций"
+            android:textSize="12sp"
+            android:textColor="#888"
+            android:layout_marginTop="12dp"
+            android:textStyle="italic" />
+
+    </LinearLayout>
+
+    <!-- Прогресс бар -->
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:visibility="gone" />
+
+    <!-- Заголовок для списка публикаций -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Публикации в этой категории:"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp"
+        android:textColor="#333" />
+
+    <!-- Список публикаций -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- Сообщение если нет публикаций -->
+    <TextView
+        android:id="@+id/tvEmpty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="В этой категории пока нет публикаций"
+        android:textSize="14sp"
+        android:textColor="#666"
+        android:gravity="center"
+        android:padding="32dp"
+        android:visibility="gone" />
+
+</LinearLayout>

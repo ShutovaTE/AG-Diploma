@@ -1,0 +1,15 @@
+- [Главная](/)
+  - **Документация Шутовой**
+    - [Главная](/shutova/)
+    - [Руководство](/shutova/guide/)
+      - [Добавление работ в выставку](/shutova/guide/adding_works)
+      - [Редактирование выставок](/shutova/guide/managing)
+    - [О проекте](/shutova/about/)
+      - [ЧаВо](/shutova/about/faq)
+  - **Документация Жминьковской**
+    - [Главная](/zhminkovskaya/)
+    - [Публикации](/zhminkovskaya/publications/)
+      - [Создание публикаций](/zhminkovskaya/publications/creating/)
+      - [Управление публикациями](/zhminkovskaya/publications/managing/)
+    - [Формы публикаций](/zhminkovskaya/forms/)
+    - [Частые вопросы](/zhminkovskaya/faq/)

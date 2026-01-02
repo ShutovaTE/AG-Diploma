@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:jpa="http://www.springframework.org/schema/data/jpa"
+       xmlns:security="http://www.springframework.org/schema/security"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/mvc
+        http://www.springframework.org/schema/mvc/spring-mvc.xsd
+        http://www.springframework.org/schema/tx
+        http://www.springframework.org/schema/tx/spring-tx.xsd
+        http://www.springframework.org/schema/data/jpa
+        http://www.springframework.org/schema/data/jpa/spring-jpa.xsd
+        http://www.springframework.org/schema/security
+        http://www.springframework.org/schema/security/spring-security.xsd">
+
+    <context:component-scan base-package="com.example.vag"/>
+
+    <jpa:repositories base-package="com.example.vag.repository"/>
+
+    <mvc:annotation-driven/>
+    <mvc:resources mapping="/resources/**" location="/resources/"/>
+    <mvc:default-servlet-handler/>
+
+    <!-- Статические ресурсы -->
+    <mvc:resources mapping="/uploads/**" location="file:D:/Java/apache-tomcat-9.0.97/webapps/vag/uploads/"/>
+    <mvc:resources mapping="/vag/uploads/**" location="file:D:/Java/apache-tomcat-9.0.97/webapps/vag/uploads/"/>
+
+    <bean id="templateResolver" class="org.thymeleaf.spring5.templateresolver.SpringResourceTemplateResolver">
+        <property name="prefix" value="/WEB-INF/views/"/>
+        <property name="suffix" value=".html"/>
+        <property name="templateMode" value="HTML"/>
+        <property name="characterEncoding" value="UTF-8"/>
+    </bean>
+
+    <bean id="templateEngine" class="org.thymeleaf.spring5.SpringTemplateEngine">
+        <property name="templateResolver" ref="templateResolver"/>
+        <property name="enableSpringELCompiler" value="true"/>
+        <property name="additionalDialects">
+            <set>
+                <bean class="org.thymeleaf.extras.java8time.dialect.Java8TimeDialect"/>
+                <bean class="org.thymeleaf.extras.springsecurity5.dialect.SpringSecurityDialect"/>
+            </set>
+        </property>
+    </bean>
+
+    <bean class="org.thymeleaf.spring5.view.ThymeleafViewResolver">
+        <property name="templateEngine" ref="templateEngine"/>
+        <property name="characterEncoding" value="UTF-8"/>
+        <property name="order" value="1"/>
+    </bean>
+
+    <bean id="entityManagerFactory" class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
+        <property name="dataSource" ref="dataSource"/>
+        <property name="packagesToScan" value="com.example.vag.model"/>
+        <property name="jpaVendorAdapter">
+            <bean class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter">
+                <property name="showSql" value="true"/>
+                <property name="generateDdl" value="true"/>
+                <property name="databasePlatform" value="org.hibernate.dialect.MySQL8Dialect"/>
+            </bean>
+        </property>
+        <property name="jpaProperties">
+            <props>
+                <prop key="hibernate.hbm2ddl.auto">update</prop>
+                <prop key="hibernate.show_sql">true</prop>
+                <prop key="hibernate.format_sql">true</prop>
+                <prop key="hibernate.enable_lazy_load_no_trans">true</prop>
+            </props>
+        </property>
+    </bean>
+
+    <bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager">
+        <property name="entityManagerFactory" ref="entityManagerFactory"/>
+    </bean>
+
+    <tx:annotation-driven transaction-manager="transactionManager"/>
+
+    <bean id="dataSource" class="com.zaxxer.hikari.HikariDataSource" destroy-method="close">
+        <property name="driverClassName" value="com.mysql.cj.jdbc.Driver"/>
+        <property name="jdbcUrl" value="jdbc:mysql://localhost:3306/vag2?useSSL=false&amp;serverTimezone=UTC&amp;characterEncoding=UTF-8&amp;useUnicode=true&amp;allowPublicKeyRetrieval=true"/>
+        <property name="username" value="root"/>
+        <property name="password" value="root"/>
+        <!-- <property name="password" value=""/> -->
+        <property name="maximumPoolSize" value="10"/>
+        <property name="connectionTimeout" value="30000"/>
+        <property name="idleTimeout" value="600000"/>
+        <property name="maxLifetime" value="1800000"/>
+    </bean>
+
+    <!-- ========== BEANS CONFIGURATION ========== -->
+    <bean id="artworkMapper" class="com.example.vag.mapper.ArtworkMapper"/>
+    <bean id="corsFilter" class="com.example.vag.config.CorsFilter"/>
+
+    <!-- Service Beans -->
+    <bean id="userService" class="com.example.vag.service.impl.UserServiceImpl">
+        <constructor-arg ref="userRepository"/>
+        <constructor-arg ref="roleRepository"/>
+        <constructor-arg ref="passwordEncoder"/>
+    </bean>
+
+    <bean id="artworkService" class="com.example.vag.service.impl.ArtworkServiceImpl">
+        <constructor-arg ref="artworkRepository"/>
+        <constructor-arg ref="categoryRepository"/>
+        <constructor-arg ref="likeRepository"/>
+        <constructor-arg ref="fileUploadUtil"/>
+    </bean>
+
+    <bean id="categoryService" class="com.example.vag.service.impl.CategoryServiceImpl">
+        <constructor-arg ref="categoryRepository"/>
+    </bean>
+
+    <bean id="exhibitionService" class="com.example.vag.service.impl.ExhibitionServiceImpl">
+        <constructor-arg ref="exhibitionRepository"/>
+    </bean>
+
+    <!-- Mobile Controllers - УБРАНА зависимость от mobileAuthController -->
+    <bean id="mobileArtworkController" class="com.example.vag.controller.mobile.MobileArtworkController">
+        <constructor-arg ref="artworkService"/>
+        <constructor-arg ref="userService"/>
+        <constructor-arg ref="fileUploadUtil"/>
+        <constructor-arg ref="artworkMapper"/>
+        <constructor-arg ref="categoryRepository"/>
+    </bean>
+
+    <bean id="mobileCategoryController" class="com.example.vag.controller.mobile.MobileCategoryController">
+        <constructor-arg ref="categoryService"/>
+        <constructor-arg ref="artworkService"/>
+        <constructor-arg ref="artworkMapper"/>
+        <constructor-arg ref="userService"/>
+    </bean>
+
+    <bean id="mobileUserController" class="com.example.vag.controller.mobile.MobileUserController">
+        <constructor-arg ref="userService"/>
+        <constructor-arg ref="artworkService"/>
+        <constructor-arg ref="artworkMapper"/>
+    </bean>
+
+    <bean id="mobileAdminController" class="com.example.vag.controller.mobile.MobileAdminController">
+        <constructor-arg ref="artworkService"/>
+        <constructor-arg ref="userService"/>
+        <constructor-arg ref="artworkMapper"/>
+    </bean>
+
+    <!-- Security Configuration -->
+    <bean id="passwordEncoder" class="org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder"/>
+
+    <bean id="userDetailsService" class="com.example.vag.service.impl.UserDetailsServiceImpl">
+        <constructor-arg ref="userRepository"/>
+    </bean>
+
+    <bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+        <property name="maxUploadSize" value="5242880"/>
+    </bean>
+
+    <bean id="fileUploadUtil" class="com.example.vag.util.FileUploadUtil"/>
+
+    <!-- Spring Security Configuration -->
+    <security:http use-expressions="true">
+        <security:csrf disabled="true"/>
+
+        <security:form-login
+                login-page="/auth/login"
+                login-processing-url="/login"
+                default-target-url="/index"
+                always-use-default-target="false"
+                authentication-failure-url="/auth/login?error"
+                username-parameter="username"
+                password-parameter="password"/>
+        <security:logout
+                logout-url="/auth/logout"
+                logout-success-url="/index"
+                delete-cookies="JSESSIONID"
+                invalidate-session="true"/>
+        <security:session-management>
+            <security:concurrency-control max-sessions="1" error-if-maximum-exceeded="true"/>
+        </security:session-management>
+
+        <!-- Публичные эндпоинты -->
+        <security:intercept-url pattern="/" access="permitAll"/>
+        <security:intercept-url pattern="/index" access="permitAll"/>
+        <security:intercept-url pattern="/auth/**" access="permitAll"/>
+        <security:intercept-url pattern="/resources/**" access="permitAll"/>
+        <security:intercept-url pattern="/uploads/**" access="permitAll"/>
+        <security:intercept-url pattern="/vag/uploads/**" access="permitAll"/>
+
+        <!-- Веб-эндпоинты -->
+        <security:intercept-url pattern="/artwork/details/**" access="permitAll"/>
+        <security:intercept-url pattern="/artwork/artworks" access="permitAll"/>
+        <security:intercept-url pattern="/artwork/list" access="permitAll"/>
+        <security:intercept-url pattern="/exhibition/details/**" access="permitAll"/>
+        <security:intercept-url pattern="/user/profile/**" access="permitAll"/>
+        <security:intercept-url pattern="/category/details/**" access="permitAll"/>
+        <security:intercept-url pattern="/category/**" access="permitAll"/>
+        <security:intercept-url pattern="/user/list" access="permitAll"/>
+
+        <!-- Мобильные API - все публичные для тестирования -->
+        <security:intercept-url pattern="/api/mobile/**" access="permitAll"/>
+
+        <!-- Защищенные веб-эндпоинты -->
+        <security:intercept-url pattern="/artwork/like/**" access="isAuthenticated()"/>
+        <security:intercept-url pattern="/artwork/unlike/**" access="isAuthenticated()"/>
+        <security:intercept-url pattern="/artwork/comment/**" access="isAuthenticated()"/>
+        <security:intercept-url pattern="/artwork/create" access="isAuthenticated()"/>
+        <security:intercept-url pattern="/artwork/edit/**" access="isAuthenticated()"/>
+        <security:intercept-url pattern="/artwork/delete/**" access="isAuthenticated()"/>
+        <security:intercept-url pattern="/exhibition/create" access="isAuthenticated()"/>
+        <security:intercept-url pattern="/exhibition/edit/**" access="isAuthenticated()"/>
+        <security:intercept-url pattern="/exhibition/delete/**" access="isAuthenticated()"/>
+        <security:intercept-url pattern="/user/**" access="isAuthenticated()"/>
+        <security:intercept-url pattern="/admin/**" access="hasRole('ADMIN')"/>
+    </security:http>
+
+    <security:authentication-manager>
+        <security:authentication-provider user-service-ref="userDetailsService">
+            <security:password-encoder ref="passwordEncoder"/>
+        </security:authentication-provider>
+    </security:authentication-manager>
+
+</beans>
