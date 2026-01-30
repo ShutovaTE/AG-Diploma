@@ -214,14 +214,14 @@
                             <goal>run</goal>
                         </goals>
                         <configuration>
-<!--                             <target>-->
-<!--                                <copy file="${project.build.directory}/${project.build.finalName}.war"-->
-<!--                                      todir="D:\Java\apache-tomcat-9.0.97\webapps"/>-->
-<!--                             </target>-->
-                            <target>
+                             <target>
+                                <copy file="${project.build.directory}/${project.build.finalName}.war"
+                                      todir="D:\Java\apache-tomcat-9.0.97\webapps"/>
+                             </target>
+<!--                            <target>
                                 <copy file="${project.build.directory}/${project.build.finalName}.war"
                                       todir="D:\Java\apache-tomcat-9.0.104\webapps"/>
-                            </target>
+                            </target>-->
                         </configuration>
                     </execution>
                 </executions>

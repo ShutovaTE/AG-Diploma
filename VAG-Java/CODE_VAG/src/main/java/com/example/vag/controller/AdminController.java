@@ -85,9 +85,24 @@ public class AdminController {
         return "redirect:/admin/artworks?approved";
     }
 
+    @GetMapping("/artworks/reject/{id}")
+    public String showRejectForm(@PathVariable Long id, Model model) {
+        Artwork artwork = artworkService.findByIdWithCategories(id)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid artwork ID"));
+        model.addAttribute("artwork", artwork);
+        return "admin/reject-artwork";
+    }
+
     @PostMapping("/artworks/reject/{id}")
-    public String rejectArtwork(@PathVariable Long id) {
-        artworkService.rejectArtwork(id);
+    public String rejectArtwork(@PathVariable Long id, 
+                                @RequestParam String rejectionReason,
+                                RedirectAttributes redirectAttributes) {
+        if (rejectionReason == null || rejectionReason.trim().isEmpty()) {
+            redirectAttributes.addFlashAttribute("error", "Причина отклонения обязательна для заполнения");
+            return "redirect:/admin/artworks/reject/" + id;
+        }
+        artworkService.rejectArtwork(id, rejectionReason.trim());
+        redirectAttributes.addFlashAttribute("message", "Публикация отклонена");
         return "redirect:/admin/artworks?rejected";
     }
 

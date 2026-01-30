@@ -29,6 +29,19 @@
                 <h1 th:text="${artwork.title}"></h1>
                 <p>Автор: <a th:href="@{/user/profile/{id}(id=${artwork.user.id})}"
                       th:text="${artwork.user.username}"></a></p>
+                <div th:if="${isAuthor}" style="margin: 10px 0;">
+                    <p>
+                        Статус: 
+                        <span th:if="${artwork.status == 'PENDING'}">Ожидает проверки</span>
+                        <span th:if="${artwork.status == 'APPROVED'}">Одобрена</span>
+                        <span th:if="${artwork.status == 'REJECTED'}">Отклонена</span>
+                    </p>
+                    <div th:if="${artwork.status == 'REJECTED' && artwork.rejectionReason != null && !artwork.rejectionReason.isEmpty()}" 
+                         class="rejection-reason" style="background-color: #ffe6e6; padding: 10px; margin: 10px 0; border-radius: 5px; border-left: 3px solid #ff4444;">
+                        <strong>Причина отклонения:</strong>
+                        <p th:text="${artwork.rejectionReason}" style="margin: 5px 0 0 0;"></p>
+                    </div>
+                </div>
                 <p>Категории:
                     <span th:each="category, iterStat : ${artwork.categories}"
                           th:text="${category.name + (iterStat.last ? '' : ', ')}">

@@ -22,7 +22,7 @@ public interface ArtworkService {
     Optional<Artwork> findById(Long id);
     void delete(Artwork artwork);
     void approveArtwork(Long artworkId);
-    void rejectArtwork(Long artworkId);
+    void rejectArtwork(Long artworkId, String rejectionReason);
     void likeArtwork(Long artworkId, User user);
     void unlikeArtwork(Long artworkId, User user);
     boolean isLikedByUser(Artwork artwork, User user);

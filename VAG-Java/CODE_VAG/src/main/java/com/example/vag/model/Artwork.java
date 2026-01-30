@@ -63,6 +63,9 @@ public class Artwork {
     @Column(nullable = false)
     private String status; // PENDING, APPROVED, REJECTED
 
+    @Column(columnDefinition = "TEXT")
+    private String rejectionReason; // Причина отклонения публикации
+
     @Column(nullable = false)
     private int likes = 0;
 
@@ -130,6 +133,14 @@ public class Artwork {
 
     public String getStatus() {
         return status;
+    }
+
+    public String getRejectionReason() {
+        return rejectionReason;
+    }
+
+    public void setRejectionReason(String rejectionReason) {
+        this.rejectionReason = rejectionReason;
     }
 
     public int getLikes() {

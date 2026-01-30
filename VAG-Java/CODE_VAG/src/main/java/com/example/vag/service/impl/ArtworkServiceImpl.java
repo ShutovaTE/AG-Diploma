@@ -132,14 +132,16 @@ public class ArtworkServiceImpl implements ArtworkService {
         Artwork artwork = artworkRepository.findById(artworkId)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid artwork ID"));
         artwork.setStatus(Artwork.ArtworkStatus.APPROVED.name());
+        artwork.setRejectionReason(null); // Очищаем причину отклонения при одобрении
         artworkRepository.save(artwork);
     }
 
     @Override
-    public void rejectArtwork(Long artworkId) {
+    public void rejectArtwork(Long artworkId, String rejectionReason) {
         Artwork artwork = artworkRepository.findById(artworkId)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid artwork ID"));
         artwork.setStatus(Artwork.ArtworkStatus.REJECTED.name());
+        artwork.setRejectionReason(rejectionReason);
         artworkRepository.save(artwork);
     }
 

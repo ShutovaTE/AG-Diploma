@@ -47,6 +47,11 @@
                     <span th:if="${artwork.status == 'APPROVED'}">Одобрена</span>
                     <span th:if="${artwork.status == 'REJECTED'}">Отклонена</span>
                 </p>
+                <div th:if="${isOwnProfile && artwork.status == 'REJECTED' && artwork.rejectionReason != null && !artwork.rejectionReason.isEmpty()}" 
+                     class="rejection-reason" style="background-color: #ffe6e6; padding: 10px; margin: 10px 0; border-radius: 5px; border-left: 3px solid #ff4444;">
+                    <strong>Причина отклонения:</strong>
+                    <p th:text="${artwork.rejectionReason}" style="margin: 5px 0 0 0;"></p>
+                </div>
                 <p th:if="${artwork.categories != null and !artwork.categories.isEmpty()}">
                     Категории:
                     <span th:each="category, iterStat : ${artwork.categories}"

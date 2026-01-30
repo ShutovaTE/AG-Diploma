@@ -47,14 +47,21 @@
                 <span th:case="*">Статус: [[${artwork.status}]]</span>
             </p>
 
+            <div th:if="${artwork.rejectionReason != null && !artwork.rejectionReason.isEmpty()}" 
+                 class="rejection-reason" style="background-color: #ffe6e6; padding: 10px; margin: 10px 0; border-radius: 5px;">
+                <strong>Причина отклонения:</strong>
+                <p th:text="${artwork.rejectionReason}"></p>
+            </div>
+
             <div th:switch="${artwork.status}">
                 <div th:case="'PENDING'">
-                    <form th:action="@{/admin/artworks/approve/{id}(id=${artwork.id})}" method="post">
+                    <form th:action="@{/admin/artworks/approve/{id}(id=${artwork.id})}" method="post" style="display: inline;">
                         <button type="submit" class="btn btn-success">Одобрить</button>
                     </form>
-                    <form th:action="@{/admin/artworks/reject/{id}(id=${artwork.id})}" method="post">
-                        <button type="submit" class="btn btn-danger">Отклонить</button>
-                    </form>
+                    <a th:href="@{/admin/artworks/reject/{id}(id=${artwork.id})}" class="btn btn-danger">Отклонить</a>
+                </div>
+                <div th:case="'APPROVED'">
+                    <a th:href="@{/admin/artworks/reject/{id}(id=${artwork.id})}" class="btn btn-danger">Отклонить</a>
                 </div>
             </div>
         </div>

@@ -82,6 +82,7 @@ public class ArtworkController {
         model.addAttribute("isLiked", currentUser != null && artworkService.isLikedByUser(artwork, currentUser));
         model.addAttribute("isAuthenticated", currentUser != null);
         model.addAttribute("isAdmin", isAdmin);
+        model.addAttribute("isAuthor", isAuthor);
 
         return "artwork/details";
     }
