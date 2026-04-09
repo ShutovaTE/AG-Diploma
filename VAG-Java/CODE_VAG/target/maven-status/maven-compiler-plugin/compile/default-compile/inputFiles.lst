@@ -12,10 +12,13 @@ C:\Users\user\Desktop\CODE_VAG\src\main\java\com\example\vag\model\Artwork.java
 C:\Users\user\Desktop\CODE_VAG\src\main\java\com\example\vag\repository\ArtworkRepository.java
 C:\Users\user\Desktop\CODE_VAG\src\main\java\com\example\vag\model\Role.java
 C:\Users\user\Desktop\CODE_VAG\src\main\java\com\example\vag\repository\CategoryRepository.java
+C:\Users\user\Desktop\CODE_VAG\src\main\java\com\example\vag\controller\UploadController.java
 C:\Users\user\Desktop\CODE_VAG\src\main\java\com\example\vag\controller\AdminController.java
 C:\Users\user\Desktop\CODE_VAG\src\main\java\com\example\vag\controller\ArtworkController.java
 C:\Users\user\Desktop\CODE_VAG\src\main\java\com\example\vag\service\ArtworkService.java
 C:\Users\user\Desktop\CODE_VAG\src\main\java\com\example\vag\service\UserService.java
+C:\Users\user\Desktop\CODE_VAG\src\main\java\com\example\vag\util\JdbcCleanupListener.java
+C:\Users\user\Desktop\CODE_VAG\src\main\java\com\example\vag\util\MinioProperties.java
 C:\Users\user\Desktop\CODE_VAG\src\main\java\com\example\vag\service\ExhibitionService.java
 C:\Users\user\Desktop\CODE_VAG\src\main\java\com\example\vag\controller\AuthController.java
 C:\Users\user\Desktop\CODE_VAG\src\main\java\com\example\vag\service\impl\CategoryServiceImpl.java

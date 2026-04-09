@@ -121,12 +121,21 @@ public class ArtworkServiceImpl implements ArtworkService {
     public void delete(Artwork artwork) {
         Artwork artworkWithExhibitions = artworkRepository.findById(artwork.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Произведение искусства не найдено"));
-        
+
         Set<Exhibition> exhibitions = new HashSet<>(artworkWithExhibitions.getExhibitions());
         for (Exhibition exhibition : exhibitions) {
             exhibitionService.removeArtworkFromExhibition(exhibition.getId(), artwork.getId());
         }
-        
+
+        String imagePath = artworkWithExhibitions.getImagePath();
+        if (imagePath != null && !imagePath.isBlank()) {
+            try {
+                fileUploadUtil.deleteFile(imagePath);
+            } catch (IOException e) {
+                throw new RuntimeException("Ошибка удаления файла из MinIO: " + imagePath, e);
+            }
+        }
+
         artworkRepository.delete(artworkWithExhibitions);
     }
 

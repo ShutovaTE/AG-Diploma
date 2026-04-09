@@ -6,8 +6,7 @@
     <link rel="stylesheet" th:href="@{/resources/css/style.css}">
 </head>
 <body>
-<th:block th:fragment="header">
-<header>
+<header th:fragment="header">
     <nav>
         <div class="logo">
             <a th:href="@{/index}">Арт-галерея</a>
@@ -24,7 +23,7 @@
 
             <div sec:authorize="isAuthenticated()">
                 <details class="notification-menu" id="notificationMenu" th:data-mark-read-url="@{/user/notifications/mark-read}">
-                    <summary class="notification-bell" id="notificationBell" onclick="markNotificationsReadAndHideBadge()">
+                    <summary class="notification-bell" id="notificationBell">
                         🔔
                         <span th:if="${unreadNotificationsCount > 0}"
                               class="notification-badge"
@@ -71,35 +70,36 @@
     </nav>
 </header>
 <script>
-    let notificationsMarkedOnce = false;
-
-    function markNotificationsReadAndHideBadge() {
+    (function () {
         const menu = document.getElementById('notificationMenu');
+        const bell = document.getElementById('notificationBell');
         const badge = document.getElementById('notificationBadge');
+        if (!menu || !bell) return;
 
-        if (badge) {
-            badge.style.display = 'none';
-        }
-        if (notificationsMarkedOnce || !menu) {
-            return;
-        }
-        notificationsMarkedOnce = true;
+        let alreadyMarked = false;
 
-        const url = menu.getAttribute('data-mark-read-url');
-        if (!url) {
-            return;
-        }
-
-        fetch(url, {
-            method: 'POST',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
+        const hideBadgeAndMarkRead = function () {
+            if (badge) {
+                badge.style.display = 'none';
             }
-        }).catch(function () {
-            // UI already updated
-        });
-    }
+            if (alreadyMarked) return;
+            alreadyMarked = true;
+
+            const url = menu.getAttribute('data-mark-read-url');
+            if (!url) return;
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            }).catch(function () {
+                // ignore network error; UI stays updated
+            });
+        };
+
+        bell.addEventListener('click', hideBadgeAndMarkRead);
+    })();
 </script>
-</th:block>
 </body>
 </html>
