@@ -22,7 +22,9 @@
             </div>
 
             <div sec:authorize="isAuthenticated()">
-                <details class="notification-menu" id="notificationMenu" th:data-mark-read-url="@{/user/notifications/mark-read}">
+                <details class="notification-menu"
+                         id="notificationMenu"
+                         th:data-mark-read-url="@{/user/notifications/mark-read}">
                     <summary class="notification-bell" id="notificationBell">
                         🔔
                         <span th:if="${unreadNotificationsCount > 0}"
@@ -68,7 +70,6 @@
 
         </div>
     </nav>
-</header>
 <script>
     (function () {
         const menu = document.getElementById('notificationMenu');
@@ -89,7 +90,9 @@
             if (!url) return;
 
             fetch(url, {
-                method: 'POST',
+                method: 'GET',
+                credentials: 'same-origin',
+                cache: 'no-store',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest'
                 }
@@ -99,7 +102,13 @@
         };
 
         bell.addEventListener('click', hideBadgeAndMarkRead);
+        menu.addEventListener('toggle', function () {
+            if (menu.open) {
+                hideBadgeAndMarkRead();
+            }
+        });
     })();
 </script>
+</header>
 </body>
 </html>

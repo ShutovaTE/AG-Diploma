@@ -183,7 +183,7 @@ public class UserController {
         return "user/notifications";
     }
 
-    @PostMapping("/notifications/mark-read")
+    @RequestMapping(value = "/notifications/mark-read", method = {RequestMethod.GET, RequestMethod.POST})
     @ResponseBody
     public void markNotificationsRead() {
         User user = userService.getCurrentUser();
