@@ -4,9 +4,9 @@ import com.example.vag.model.*;
 import com.example.vag.repository.*;
 import com.example.vag.service.ArtworkService;
 import com.example.vag.service.ExhibitionService;
+import com.example.vag.service.NotificationService;
 import com.example.vag.util.FileUploadUtil;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,19 +32,22 @@ public class ArtworkServiceImpl implements ArtworkService {
     private final CommentRepository commentRepository;
     private final FileUploadUtil fileUploadUtil;
     private final ExhibitionService exhibitionService;
+    private final NotificationService notificationService;
 
     public ArtworkServiceImpl(ArtworkRepository artworkRepository,
                               CategoryRepository categoryRepository,
                               CommentRepository commentRepository,
                               LikeRepository likeRepository,
                               FileUploadUtil fileUploadUtil,
-                              ExhibitionService exhibitionService) {
+                              ExhibitionService exhibitionService,
+                              NotificationService notificationService) {
         this.artworkRepository = artworkRepository;
         this.categoryRepository = categoryRepository;
         this.commentRepository = commentRepository;
         this.likeRepository = likeRepository;
         this.fileUploadUtil = fileUploadUtil;
         this.exhibitionService = exhibitionService;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -134,6 +137,11 @@ public class ArtworkServiceImpl implements ArtworkService {
         artwork.setStatus(Artwork.ArtworkStatus.APPROVED.name());
         artwork.setRejectionReason(null); // Очищаем причину отклонения при одобрении
         artworkRepository.save(artwork);
+        notificationService.create(
+                artwork.getUser(),
+                "Ваша публикация \"" + artwork.getTitle() + "\" была одобрена.",
+                "/artwork/details/" + artwork.getId()
+        );
     }
 
     @Override
@@ -143,6 +151,11 @@ public class ArtworkServiceImpl implements ArtworkService {
         artwork.setStatus(Artwork.ArtworkStatus.REJECTED.name());
         artwork.setRejectionReason(rejectionReason);
         artworkRepository.save(artwork);
+        notificationService.create(
+                artwork.getUser(),
+                "Ваша публикация \"" + artwork.getTitle() + "\" была отклонена. Причина: " + rejectionReason,
+                "/artwork/details/" + artwork.getId()
+        );
     }
 
 

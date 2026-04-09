@@ -8,9 +8,11 @@ com\example\vag\controller\AuthController.class
 com\example\vag\controller\CategoryController.class
 com\example\vag\model\Role$RoleName.class
 com\example\vag\controller\UserController.class
+com\example\vag\service\impl\NotificationServiceImpl.class
 com\example\vag\controller\ArtworkController.class
 com\example\vag\model\Artwork$ArtworkStatus.class
 com\example\vag\model\Artwork.class
+com\example\vag\service\NotificationService.class
 com\example\vag\model\Like.class
 com\example\vag\validation\UpdateValidation.class
 com\example\vag\service\impl\CategoryServiceImpl.class
@@ -26,11 +28,14 @@ com\example\vag\controller\AdminController.class
 com\example\vag\service\UserService.class
 com\example\vag\model\Role.class
 com\example\vag\controller\ExhibitionController.class
+com\example\vag\controller\GlobalModelAttributes.class
 com\example\vag\service\ArtworkService.class
 com\example\vag\service\impl\ArtworkServiceImpl.class
+com\example\vag\model\Notification.class
 com\example\vag\model\User.class
 com\example\vag\repository\ExhibitionRepository.class
 com\example\vag\repository\UserRepository.class
 com\example\vag\service\CustomUserDetailsService.class
 com\example\vag\model\Exhibition.class
+com\example\vag\repository\NotificationRepository.class
 com\example\vag\repository\CategoryRepository.class

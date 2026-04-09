@@ -4,6 +4,7 @@ import com.example.vag.model.Artwork;
 import com.example.vag.model.Exhibition;
 import com.example.vag.model.User;
 import com.example.vag.service.ArtworkService;
+import com.example.vag.service.NotificationService;
 import com.example.vag.service.UserService;
 import com.example.vag.validation.UpdateValidation;
 import org.springframework.data.domain.Page;
@@ -20,7 +21,6 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import com.example.vag.service.ExhibitionService;
 
-import javax.validation.Valid;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -31,11 +31,16 @@ public class UserController {
     private final UserService userService;
     private final ArtworkService artworkService;
     private final ExhibitionService exhibitionService;
+    private final NotificationService notificationService;
 
-    public UserController(UserService userService, ArtworkService artworkService, ExhibitionService exhibitionService) {
+    public UserController(UserService userService,
+                          ArtworkService artworkService,
+                          ExhibitionService exhibitionService,
+                          NotificationService notificationService) {
         this.userService = userService;
         this.artworkService = artworkService;
         this.exhibitionService = exhibitionService;
+        this.notificationService = notificationService;
     }
 
     @GetMapping("/profile")
@@ -145,7 +150,6 @@ public class UserController {
         userService.update(user);
 
         if (!user.getUsername().equals(currentUser.getUsername())) {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             SecurityContextHolder.getContext().setAuthentication(null);
         }
 
@@ -164,6 +168,28 @@ public class UserController {
 
         model.addAttribute("artworks", artworkPage);
         return "user/liked";
+    }
+
+    @GetMapping("/notifications")
+    public String notifications(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            Model model) {
+        User user = userService.getCurrentUser();
+        notificationService.markAllAsRead(user);
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        model.addAttribute("notifications", notificationService.findAll(user, pageable));
+        return "user/notifications";
+    }
+
+    @PostMapping("/notifications/mark-read")
+    @ResponseBody
+    public void markNotificationsRead() {
+        User user = userService.getCurrentUser();
+        if (user != null) {
+            notificationService.markAllAsRead(user);
+        }
     }
 
     @GetMapping("/list")

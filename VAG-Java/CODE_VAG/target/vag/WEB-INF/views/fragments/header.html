@@ -6,6 +6,7 @@
     <link rel="stylesheet" th:href="@{/resources/css/style.css}">
 </head>
 <body>
+<th:block th:fragment="header">
 <header>
     <nav>
         <div class="logo">
@@ -22,6 +23,38 @@
             </div>
 
             <div sec:authorize="isAuthenticated()">
+                <details class="notification-menu" id="notificationMenu" th:data-mark-read-url="@{/user/notifications/mark-read}">
+                    <summary class="notification-bell" id="notificationBell" onclick="markNotificationsReadAndHideBadge()">
+                        🔔
+                        <span th:if="${unreadNotificationsCount > 0}"
+                              class="notification-badge"
+                              id="notificationBadge"
+                              th:text="${unreadNotificationsCount > 99 ? '99+' : unreadNotificationsCount}"></span>
+                    </summary>
+                    <div class="notification-dropdown">
+                        <h4>Недавние уведомления</h4>
+                        <div th:if="${recentNotifications == null || #lists.isEmpty(recentNotifications)}" class="notification-empty">
+                            Пока уведомлений нет
+                        </div>
+                        <div th:unless="${recentNotifications == null || #lists.isEmpty(recentNotifications)}">
+                            <th:block th:each="notification : ${recentNotifications}">
+                                <a th:if="${notification.targetLink != null}"
+                                   th:href="@{${notification.targetLink}}"
+                                   class="notification-item">
+                                    <span th:text="${notification.message}"></span>
+                                    <small th:text="${#temporals.format(notification.createdAt, 'dd.MM.yyyy HH:mm')}"></small>
+                                </a>
+                                <a th:unless="${notification.targetLink != null}"
+                                   th:href="@{/user/notifications}"
+                                   class="notification-item">
+                                    <span th:text="${notification.message}"></span>
+                                    <small th:text="${#temporals.format(notification.createdAt, 'dd.MM.yyyy HH:mm')}"></small>
+                                </a>
+                            </th:block>
+                        </div>
+                        <a th:href="@{/user/notifications}" class="notification-all-link">Посмотреть все уведомления</a>
+                    </div>
+                </details>
                 <a th:href="@{/user/profile}">Мой профиль</a>
                 <a th:href="@{/user/liked}">Понравившееся</a>
                 <form th:action="@{/auth/logout}" method="post">
@@ -37,5 +70,36 @@
         </div>
     </nav>
 </header>
+<script>
+    let notificationsMarkedOnce = false;
+
+    function markNotificationsReadAndHideBadge() {
+        const menu = document.getElementById('notificationMenu');
+        const badge = document.getElementById('notificationBadge');
+
+        if (badge) {
+            badge.style.display = 'none';
+        }
+        if (notificationsMarkedOnce || !menu) {
+            return;
+        }
+        notificationsMarkedOnce = true;
+
+        const url = menu.getAttribute('data-mark-read-url');
+        if (!url) {
+            return;
+        }
+
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        }).catch(function () {
+            // UI already updated
+        });
+    }
+</script>
+</th:block>
 </body>
 </html>
