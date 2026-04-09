@@ -12,9 +12,19 @@ setx MINIO_ACCESS_KEY "minioadmin"
 setx MINIO_SECRET_KEY "minioadmin"
 6. Перезапустить ВСЁ (IDE, Tomcat, терминал)
 7. Проверить minio.properties в проекте
-src/main/resources/minio.properties:
+src/main/resources/minio.properties что-то типа такое должно быть:
 
 minio.endpoint=http://127.0.0.1:9000
 minio.accessKey=${MINIO_ACCESS_KEY:minioadmin}
 minio.secretKey=${MINIO_SECRET_KEY:minioadmin}
 minio.bucket=vag-images
+
+
+---
+8. Создать файл setenv.bat в apache-tomcat-9.0.97\bin\setenv.bat
+9. Внести туда 2 и 3 строку тз файла minio.properties
+типа такого 
+@echo off
+set "MINIO_ACCESS_KEY=minioadmin"
+set "MINIO_SECRET_KEY=minioadmin"
+

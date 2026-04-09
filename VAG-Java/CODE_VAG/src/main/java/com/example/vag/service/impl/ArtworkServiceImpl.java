@@ -181,6 +181,7 @@ public class ArtworkServiceImpl implements ArtworkService {
             likeRepository.save(like);
             artwork.setLikes(artwork.getLikes() + 1);
             artworkRepository.save(artwork);
+            notifyArtworkAuthorAboutLike(artwork, user);
         }
     }
     @Override
@@ -215,6 +216,7 @@ public class ArtworkServiceImpl implements ArtworkService {
         comment.setArtwork(artwork);
 
         commentRepository.save(comment);
+        notifyArtworkAuthorAboutComment(artwork, user, content);
     }
 
     @Override
@@ -278,4 +280,39 @@ public class ArtworkServiceImpl implements ArtworkService {
         return artworkRepository.findByExhibitionId(exhibitionId, pageable);
     }
 
+    private void notifyArtworkAuthorAboutLike(Artwork artwork, User actor) {
+        User author = artwork.getUser();
+        if (author == null || actor == null || author.getId().equals(actor.getId())) {
+            return;
+        }
+        notificationService.create(
+                author,
+                "Пользователь " + actor.getUsername() + " поставил лайк вашей публикации \"" + artwork.getTitle() + "\".",
+                "/artwork/details/" + artwork.getId()
+        );
+    }
+
+    private void notifyArtworkAuthorAboutComment(Artwork artwork, User actor, String content) {
+        User author = artwork.getUser();
+        if (author == null || actor == null || author.getId().equals(actor.getId())) {
+            return;
+        }
+        String commentPreview = buildCommentPreview(content);
+        notificationService.create(
+                author,
+                "Пользователь " + actor.getUsername() + " прокомментировал вашу публикацию \"" + artwork.getTitle() + "\": " + commentPreview,
+                "/artwork/details/" + artwork.getId()
+        );
+    }
+
+    private String buildCommentPreview(String content) {
+        if (content == null || content.isBlank()) {
+            return "\"\"";
+        }
+        String normalized = content.trim().replaceAll("\\s+", " ");
+        if (normalized.length() <= 80) {
+            return "\"" + normalized + "\"";
+        }
+        return "\"" + normalized.substring(0, 80) + "...\"";
+    }
 }
