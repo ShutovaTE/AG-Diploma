@@ -22,10 +22,8 @@
     -->
 
     <!-- Сервис рекомендаций (по умолчанию) -->
-    <!--
     <bean id="recommendationService" 
           class="com.example.vag.recommendation.service.RecommendationServiceImpl" />
-    -->
 
     <!-- Сервис рекомендаций с настраиваемыми путями -->
     <!--
@@ -37,11 +35,10 @@
     -->
 
     <!-- REST-контроллер рекомендаций -->
-    <!--
     <bean id="recommendationController" 
           class="com.example.vag.recommendation.controller.RecommendationController">
         <constructor-arg ref="recommendationService" />
     </bean>
-    -->
+   
 
 </beans>

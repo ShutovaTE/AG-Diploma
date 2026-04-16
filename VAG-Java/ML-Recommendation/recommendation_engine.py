@@ -17,6 +17,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.model_selection import train_test_split
 import mysql.connector
 from mysql.connector import Error
+import warnings
+warnings.filterwarnings('ignore')
 
 
 # =============================================================================
@@ -38,7 +40,6 @@ def get_db_connection():
         print(f"Ошибка подключения к БД: {e}")
         return None
 
-
 def load_data_from_db(connection):
     """Загрузка всех необходимых данных из базы"""
     
@@ -48,7 +49,7 @@ def load_data_from_db(connection):
             a.id AS artwork_id,
             a.title,
             a.description,
-            a.date_creation,
+            a.dateCreation,
             a.likes,
             a.views,
             a.status,
@@ -494,6 +495,8 @@ def get_recommendations_for_user_json(user_id, connection, top_n=10):
     - Распарсить вывод JSON
     """
     import json
+
+    user_id = int(user_id)
     
     # Загрузка данных
     artworks_df, likes_df, comments_df = load_data_from_db(connection)
@@ -552,7 +555,7 @@ def get_recommendations_for_user_json(user_id, connection, top_n=10):
         "user_id": user_id,
         "recommendations": recommendations,
         "algorithm": "hybrid"
-    })
+    }, ensure_ascii = False)
 
 
 # =============================================================================

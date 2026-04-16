@@ -1,0 +1,13 @@
+<div th:if="${recommendations != null and !recommendations.isEmpty()}" class="recommendations-section">
+    <h2>Рекомендуем для вас</h2>
+    <div class="recommendations-grid">
+        <div th:each="rec : ${recommendations}" class="recommendation-card">
+            <a th:href="@{/artwork/details/{id}(id=${rec.artworkId})}">
+                <h3 th:text="${rec.title}">Название работы</h3>
+                <p th:text="${rec.author}">Автор</p>
+                <p th:text="${rec.categories}">Категории</p>
+                <span class="score" th:text="'Совпадение: ' + ${#numbers.formatPercent(rec.score, 0, 0)}">85%</span>
+            </a>
+        </div>
+    </div>
+</div>
