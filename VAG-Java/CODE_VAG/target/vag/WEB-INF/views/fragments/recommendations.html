@@ -1,13 +1,60 @@
 <div th:if="${recommendations != null and !recommendations.isEmpty()}" class="recommendations-section">
-    <h2>Рекомендуем для вас</h2>
+    <div class="recommendations-header">
+        <div></div> 
+        <h2>Рекомендуем для вас</h2>
+        <div class="retrain-button-wrapper">
+            <form sec:authorize="hasRole('ADMIN')" style="margin:0;">
+                <button type="button" class="btn btn-primary" id="retrainModelBtn" style="padding: 8px 16px;">
+                    ⟳ Переобучить модель
+                </button>
+            </form>
+        </div>
+    </div>
     <div class="recommendations-grid">
         <div th:each="rec : ${recommendations}" class="recommendation-card">
             <a th:href="@{/artwork/details/{id}(id=${rec.artworkId})}">
                 <h3 th:text="${rec.title}">Название работы</h3>
                 <p th:text="${rec.author}">Автор</p>
                 <p th:text="${rec.categories}">Категории</p>
-                <span class="score" th:text="'Совпадение: ' + ${#numbers.formatPercent(rec.score, 0, 0)}">85%</span>
+                <span class="score" th:text="'Совпадение: ' + ${#numbers.formatPercent(rec.score, 0, 0)}">80%</span>
             </a>
         </div>
     </div>
+    <script th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function() {
+            var btn = document.getElementById('retrainModelBtn');
+            if (btn) {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    if (!confirm('Переобучить модель рекомендаций? Это может занять несколько секунд при следующем запросе.')) {
+                        return;
+                    }
+                    fetch('/vag/api/recommendations/retrain', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('HTTP error ' + response.status);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            alert(data.message);
+                            // Перезагружаем страницу через 1 секунду, чтобы пользователь увидел обновлённые рекомендации
+                            setTimeout(() => location.reload(), 1000);
+                        } else {
+                            alert('Ошибка: ' + data.message);
+                        }
+                    })
+                    .catch(error => {
+                        alert('Ошибка соединения: ' + error.message);
+                    });
+                });
+            }
+        });
+    </script>
 </div>

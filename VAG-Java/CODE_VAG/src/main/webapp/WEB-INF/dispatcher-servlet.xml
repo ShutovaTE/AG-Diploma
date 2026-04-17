@@ -139,6 +139,8 @@
         <security:intercept-url pattern="/user/**" access="isAuthenticated()"/>
         <security:intercept-url pattern="/admin/**" access="hasRole('ADMIN')"/>
 
+        <security:intercept-url pattern="/api/recommendations/retrain" access="hasRole('ADMIN')" method="POST"/>
+
         <security:form-login
                 login-page="/auth/login"
                 login-processing-url="/login"

@@ -38,4 +38,8 @@ public interface RecommendationService {
      * @return true, если Python-скрипт и все зависимости доступны
      */
     boolean isRecommendationSystemAvailable();
+
+    void clearModelCache();
+
+    void retrainModel();
 }

@@ -1,5 +1,0 @@
-# Created at 2026-04-16T20:35:03.187
-Boot Manifest-JAR contains absolute paths in classpath 'd:\Git\AG-Diploma\VAG-Java\CODE_VAG\target\test-classes'
-Hint: <argLine>-Djdk.net.URLClassPath.disableClassPathURLCheck=true</argLine>
-'other' has different root
-

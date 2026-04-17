@@ -120,4 +120,20 @@ public class RecommendationController {
                 .map(User::getId)
                 .orElse(null);
     }
+
+    @PostMapping("/retrain")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, Object>> retrainModel() {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            recommendationService.retrainModel();
+            response.put("success", true);
+            response.put("message", "Кэш модели очищен. Модель будет переобучена при следующем запросе рекомендаций.");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "Ошибка при очистке кэша: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
 }

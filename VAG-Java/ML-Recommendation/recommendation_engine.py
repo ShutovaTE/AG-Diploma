@@ -19,6 +19,38 @@ import mysql.connector
 from mysql.connector import Error
 import warnings
 warnings.filterwarnings('ignore')
+import pickle
+import os
+from datetime import datetime, timedelta
+
+CACHE_DIR = os.path.join(os.path.dirname(__file__), 'model_cache')
+CACHE_FILE = os.path.join(CACHE_DIR, 'recommendation_model.pkl')
+CACHE_TTL_HOURS = 24  
+
+def ensure_cache_dir():
+    if not os.path.exists(CACHE_DIR):
+        os.makedirs(CACHE_DIR)
+
+def is_cache_valid():
+    if not os.path.exists(CACHE_FILE):
+        return False
+    mtime = datetime.fromtimestamp(os.path.getmtime(CACHE_FILE))
+    return datetime.now() - mtime < timedelta(hours=CACHE_TTL_HOURS)
+
+def save_model(svd, content_sim, artworks_df, interactions_df):
+    ensure_cache_dir()
+    with open(CACHE_FILE, 'wb') as f:
+        pickle.dump({
+            'svd': svd,
+            'content_sim': content_sim,
+            'artworks_df': artworks_df,
+            'interactions_df': interactions_df
+        }, f)
+
+def load_model():
+    with open(CACHE_FILE, 'rb') as f:
+        data = pickle.load(f)
+    return data['svd'], data['content_sim'], data['artworks_df'], data['interactions_df']
 
 
 # =============================================================================
@@ -276,11 +308,16 @@ class SimpleSVD:
         """Предсказание рейтинга для пары пользователь-работа"""
         if self.global_mean is None:
             return 0.0
-        
-        pred = self.global_mean + self.user_bias[user_id] + self.item_bias[item_id] + \
-               np.dot(self.user_factors[user_id], self.item_factors[item_id])
-        
-        return max(0.0, min(pred, 1.5))  # Ограничение диапазона
+
+        # Если пользователь или работа не были в обучающей выборке, возвращаем среднее
+        if user_id >= len(self.user_bias) or item_id >= len(self.item_bias):
+            return self.global_mean
+
+        pred = (self.global_mean +
+                self.user_bias[user_id] +
+                self.item_bias[item_id] +
+                np.dot(self.user_factors[user_id], self.item_factors[item_id]))
+        return max(0.0, min(pred, 1.5))
 
 
 def train_svd_model(interactions_df):
@@ -334,20 +371,18 @@ def get_collab_recommendations(user_id, all_artwork_ids, svd, top_n=5):
 
 def hybrid_recommendations(user_id, interactions_df, artworks_df, svd, 
                            content_sim, alpha=0.6, top_n=5):
-    """
-    Гибридные рекомендации: комбинация контентной и коллаборативной фильтрации.
-    
-    Параметры:
-    - user_id: ID пользователя
-    - interactions_df: DataFrame взаимодействий
-    - artworks_df: DataFrame работ
-    - svd: обученная SVD модель
-    - content_sim: матрица косинусного сходства
-    - alpha: вес коллаборативной составляющей (0.0 - 1.0)
-    - top_n: количество рекомендаций
-    
-    Возвращает: список ID рекомендованных работ
-    """
+
+    # Если нет взаимодействий у пользователя
+    if interactions_df.empty or user_id not in interactions_df['user_id'].unique():
+        # Fallback: популярные работы (по лайкам) или случайные
+        fallback_candidates = artworks_df.sort_values('likes', ascending=False).head(top_n * 2)
+        if fallback_candidates.empty:
+            return []
+        # Присваиваем фиктивный скор 0.5 (или нормализованный по лайкам)
+        popular_recs = []
+        for _, row in fallback_candidates.iterrows():
+            popular_recs.append((int(row['artwork_id']), 0.5))
+        return popular_recs[:top_n]
     
     # Работы, с которыми пользователь уже взаимодействовал
     if not interactions_df.empty:
@@ -364,8 +399,12 @@ def hybrid_recommendations(user_id, interactions_df, artworks_df, svd,
     # --- Коллаборативные предсказания ---
     collab_scores = {}
     for aid in candidates:
-        pred = svd.predict(user_id, int(aid))
-        collab_scores[aid] = pred
+        try:
+            pred = svd.predict(user_id, int(aid))
+            collab_scores[aid] = pred
+        except Exception as e:
+            # На случай непредвиденных ошибок – ставим нейтральный рейтинг
+            collab_scores[aid] = svd.global_mean if svd.global_mean is not None else 0.5
     
     # --- Контентные предсказания ---
     # Находим работы, которые пользователь лайкал
@@ -401,7 +440,7 @@ def hybrid_recommendations(user_id, interactions_df, artworks_df, svd,
     
     # --- Сортировка и возврат top_n ---
     sorted_items = sorted(hybrid.items(), key=lambda x: x[1], reverse=True)
-    return [int(aid) for aid, _ in sorted_items[:top_n]]
+    return [(int(aid), score) for aid, score in sorted_items[:top_n]]
 
 
 # =============================================================================
@@ -485,18 +524,23 @@ def evaluate_model(svd, test_data, artworks_df):
 # 7. Вспомогательные функции для интеграции с Java
 # =============================================================================
 
-def get_recommendations_for_user_json(user_id, connection, top_n=10):
-    """
-    Функция для вызова из Java-приложения.
-    Возвращает JSON-совместимый словарь с рекомендациями.
-    
-    Использование в Java:
-    - Вызвать как subprocess: python recommendation_engine.py --user_id 1
-    - Распарсить вывод JSON
-    """
+def get_recommendations_for_user_json(user_id, connection, top_n=10, force_retrain=False):
     import json
-
     user_id = int(user_id)
+
+    # Проверяем кэш
+    if not force_retrain and is_cache_valid():
+        svd, content_sim, artworks_df, interactions_df = load_model()
+    else:
+        # Загружаем данные и обучаем модель
+        artworks_df, likes_df, comments_df = load_data_from_db(connection)
+        if artworks_df.empty:
+            return json.dumps({"error": "Нет данных в базе", "recommendations": []})
+        interactions_df = prepare_interactions(artworks_df, likes_df, comments_df)
+        artworks_df, _, content_sim, _ = build_content_features(artworks_df)
+        svd, _, _ = train_svd_model(interactions_df)
+        if svd is not None:
+            save_model(svd, content_sim, artworks_df, interactions_df)
     
     # Загрузка данных
     artworks_df, likes_df, comments_df = load_data_from_db(connection)
@@ -537,8 +581,13 @@ def get_recommendations_for_user_json(user_id, connection, top_n=10):
     )
     
     # Формирование ответа с деталями работ
+    rec_tuples = hybrid_recommendations(
+    user_id, interactions_df, artworks_df, svd,
+    content_sim, alpha=0.6, top_n=top_n
+)
+
     recommendations = []
-    for aid in rec_ids:
+    for aid, score in rec_tuples:
         artwork = artworks_df[artworks_df['artwork_id'] == aid]
         if not artwork.empty:
             row = artwork.iloc[0]
@@ -548,7 +597,7 @@ def get_recommendations_for_user_json(user_id, connection, top_n=10):
                 "author": row['author_name'],
                 "categories": row['categories'],
                 "likes": int(row['likes']),
-                "score": 0.8  # Можно заменить на реальный score
+                "score": float(score)  
             })
     
     return json.dumps({
@@ -617,17 +666,17 @@ def main():
             print(f"  Рекомендации для пользователя {user_id}")
             print(f"{'='*60}")
             
-            rec_ids = hybrid_recommendations(
+            rec_tuples = hybrid_recommendations(
                 user_id, interactions_df, artworks_df, svd, 
                 content_sim, alpha=0.6, top_n=5
             )
             
             print("\nТоп-5 рекомендованных работ:")
-            for i, aid in enumerate(rec_ids, 1):
+            for i, (aid, score) in enumerate(rec_tuples, 1):
                 artwork = artworks_df[artworks_df['artwork_id'] == aid]
                 if not artwork.empty:
                     row = artwork.iloc[0]
-                    print(f"  {i}. ID {aid}: {row['title']} — {row['author_name']}")
+                    print(f"  {i}. ID {aid}: {row['title']} — {row['author_name']} (score: {score:.3f})")
                     if row['categories']:
                         print(f"     Категории: {row['categories']}")
         
@@ -674,15 +723,12 @@ def main():
 
 if __name__ == "__main__":
     import sys
-    
-    # Проверка аргументов командной строки
+    force = '--force_retrain' in sys.argv
     if len(sys.argv) > 1 and sys.argv[1] == "--user_id":
-        # Режим для вызова из Java
         user_id = int(sys.argv[2])
         connection = get_db_connection()
         if connection:
-            print(get_recommendations_for_user_json(user_id, connection, top_n=10))
+            print(get_recommendations_for_user_json(user_id, connection, top_n=10, force_retrain=force))
             connection.close()
     else:
-        # Режим демонстрации
         main()

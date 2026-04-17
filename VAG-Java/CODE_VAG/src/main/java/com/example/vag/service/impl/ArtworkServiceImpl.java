@@ -1,6 +1,7 @@
 package com.example.vag.service.impl;
 
 import com.example.vag.model.*;
+import com.example.vag.recommendation.service.RecommendationService;
 import com.example.vag.repository.*;
 import com.example.vag.service.ArtworkService;
 import com.example.vag.service.ExhibitionService;
@@ -33,6 +34,7 @@ public class ArtworkServiceImpl implements ArtworkService {
     private final FileUploadUtil fileUploadUtil;
     private final ExhibitionService exhibitionService;
     private final NotificationService notificationService;
+    private final RecommendationService recommendationService;
 
     public ArtworkServiceImpl(ArtworkRepository artworkRepository,
                               CategoryRepository categoryRepository,
@@ -40,7 +42,8 @@ public class ArtworkServiceImpl implements ArtworkService {
                               LikeRepository likeRepository,
                               FileUploadUtil fileUploadUtil,
                               ExhibitionService exhibitionService,
-                              NotificationService notificationService) {
+                              NotificationService notificationService, 
+                              RecommendationService recommendationService) {
         this.artworkRepository = artworkRepository;
         this.categoryRepository = categoryRepository;
         this.commentRepository = commentRepository;
@@ -48,6 +51,7 @@ public class ArtworkServiceImpl implements ArtworkService {
         this.fileUploadUtil = fileUploadUtil;
         this.exhibitionService = exhibitionService;
         this.notificationService = notificationService;
+        this.recommendationService = recommendationService;
     }
 
     @Override
@@ -137,6 +141,7 @@ public class ArtworkServiceImpl implements ArtworkService {
         }
 
         artworkRepository.delete(artworkWithExhibitions);
+        recommendationService.clearModelCache();
     }
 
     @Override
@@ -151,6 +156,7 @@ public class ArtworkServiceImpl implements ArtworkService {
                 "Ваша публикация \"" + artwork.getTitle() + "\" была одобрена.",
                 "/artwork/details/" + artwork.getId()
         );
+        recommendationService.clearModelCache();
     }
 
     @Override
@@ -183,11 +189,14 @@ public class ArtworkServiceImpl implements ArtworkService {
             artworkRepository.save(artwork);
             notifyArtworkAuthorAboutLike(artwork, user);
         }
+        recommendationService.clearModelCache();
     }
+
     @Override
     public long countApprovedArtworksByCategoryId(Long categoryId) {
         return artworkRepository.countApprovedArtworksByCategoryId(categoryId);
     }
+
     @Override
     public void unlikeArtwork(Long artworkId, User user) {
         Artwork artwork = artworkRepository.findById(artworkId)
@@ -198,6 +207,7 @@ public class ArtworkServiceImpl implements ArtworkService {
             artwork.setLikes(artwork.getLikes() - 1);
             artworkRepository.save(artwork);
         });
+        recommendationService.clearModelCache();
     }
 
     @Override
@@ -217,6 +227,7 @@ public class ArtworkServiceImpl implements ArtworkService {
 
         commentRepository.save(comment);
         notifyArtworkAuthorAboutComment(artwork, user, content);
+        recommendationService.clearModelCache();
     }
 
     @Override
