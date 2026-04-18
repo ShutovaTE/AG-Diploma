@@ -96,7 +96,7 @@ public class ArtworkController {
         return "artwork/create";
     }
 
-    @PostMapping("/create")
+    /*@PostMapping("/create")
     @Transactional
     public String createArtwork(
             @Valid @ModelAttribute("artwork") Artwork artwork,
@@ -119,12 +119,12 @@ public class ArtworkController {
         }
 
         Artwork savedArtwork = artworkService.create(artwork, imageFile, currentUser);
-        
+
         if (exhibitionId != null) {
             Exhibition exhibition = exhibitionService.findById(exhibitionId).orElseThrow();
             Long currentUserId = currentUser.getId();
             Long exhibitionUserId = exhibition.getUser().getId();
-            
+
             if (!exhibition.isAuthorOnly() || currentUserId.equals(exhibitionUserId)) {
                 exhibition.getArtworks().add(savedArtwork);
                 savedArtwork.getExhibitions().add(exhibition);
@@ -133,9 +133,84 @@ public class ArtworkController {
                 return "redirect:/exhibition/details/" + exhibitionId;
             }
         }
-        
+
+        return "redirect:/user/profile?created";
+    }*/
+
+    @PostMapping("/create")
+    @Transactional
+    public String createArtwork(
+            @Valid @ModelAttribute("artwork") Artwork artwork,
+            BindingResult bindingResult,
+            @RequestParam("categoryIds") List<Long> categoryIds,
+            @RequestParam("imageFile") MultipartFile imageFile,
+            @RequestParam(required = false) Long exhibitionId,
+            Model model,
+            RedirectAttributes redirectAttributes) throws IOException {
+
+        User currentUser = userService.getCurrentUser();
+        if (currentUser == null) {
+            return "redirect:/auth/login";
+        }
+
+        if (bindingResult.hasErrors()) {
+            model.addAttribute("categories", categoryService.findAll());
+            model.addAttribute("selectedCategoryIds", categoryIds);
+            model.addAttribute("exhibitionId", exhibitionId);
+            return "artwork/create";
+        }
+
+        if (imageFile.isEmpty()) {
+            redirectAttributes.addFlashAttribute("error", "Необходимо выбрать изображение для загрузки");
+            redirectAttributes.addFlashAttribute("artwork", artwork);
+            redirectAttributes.addFlashAttribute("selectedCategoryIds", categoryIds);
+            redirectAttributes.addFlashAttribute("exhibitionId", exhibitionId);
+            return "redirect:/artwork/create";
+        }
+
+        String contentType = imageFile.getContentType();
+        String originalFilename = imageFile.getOriginalFilename();
+        boolean isValidType = false;
+        if (contentType != null) {
+            isValidType = contentType.equals("image/jpeg")
+                    || contentType.equals("image/png")
+                    || contentType.equals("image/webp");
+        }
+        boolean isValidExtension = originalFilename != null &&
+                originalFilename.toLowerCase().matches(".*\\.(jpg|jpeg|png|webp)$");
+
+        if (!isValidType && !isValidExtension) {
+            redirectAttributes.addFlashAttribute("error",
+                    "Неподдерживаемый формат файла. Разрешены: JPEG, PNG, WebP.");
+            redirectAttributes.addFlashAttribute("artwork", artwork);
+            redirectAttributes.addFlashAttribute("selectedCategoryIds", categoryIds);
+            redirectAttributes.addFlashAttribute("exhibitionId", exhibitionId);
+            return "redirect:/artwork/create";
+        }
+
+        Artwork savedArtwork = artworkService.create(artwork, imageFile, currentUser);
+
+        if (exhibitionId != null) {
+            Exhibition exhibition = exhibitionService.findById(exhibitionId).orElseThrow();
+            Long currentUserId = currentUser.getId();
+            Long exhibitionUserId = exhibition.getUser().getId();
+
+            if (!exhibition.isAuthorOnly() || currentUserId.equals(exhibitionUserId)) {
+                exhibition.getArtworks().add(savedArtwork);
+                savedArtwork.getExhibitions().add(exhibition);
+                exhibitionService.save(exhibition);
+                artworkService.save(savedArtwork);
+                return "redirect:/exhibition/details/" + exhibitionId;
+            } else {
+                redirectAttributes.addFlashAttribute("warning",
+                        "Вы не можете добавлять работы в эту выставку (только автор выставки).");
+            }
+        }
+
+        redirectAttributes.addFlashAttribute("message", "Произведение успешно опубликовано!");
         return "redirect:/user/profile?created";
     }
+
     @GetMapping("/edit/{id}")
     public String showEditForm(@PathVariable Long id, Model model) {
         Artwork existingArtwork = artworkService.findByIdWithCategories(id).orElseThrow();
