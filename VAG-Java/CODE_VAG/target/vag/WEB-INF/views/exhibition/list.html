@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title>Выставки - Виртуальная арт-галерея</title>
+    <link rel="stylesheet" th:href="@{/resources/css/style.css}">
+</head>
+<body>
+<div th:replace="fragments/header :: header"></div>
+
+<div class="container">
+    <h1>Выставки</h1>
+
+    <div sec:authorize="isAuthenticated()">
+        <a th:href="@{/exhibition/create}" class="btn btn-primary">Создать новую выставку</a>
+    </div>
+
+    <div class="exhibition-grid">
+        <div th:each="exhibition : ${exhibitions.content}" class="exhibition-card">
+            <a th:href="@{/exhibition/details/{id}(id=${exhibition.id})}">
+                <div class="exhibition-image">
+                    <img th:if="${#authorization.expression('isAuthenticated()') and #authentication.name == exhibition.user.username and exhibition.artworks.size() > 0}"
+                         th:src="@{/uploads/{path}(path=${exhibition.artworks[0].imagePath})}"
+                         alt="Изображение выставки">
+                    <img th:if="${not (#authorization.expression('isAuthenticated()') and #authentication.name == exhibition.user.username) and exhibition.artworks.?[status == 'APPROVED'].size() > 0}"
+                         th:src="@{/uploads/{path}(path=${exhibition.artworks.?[status == 'APPROVED'][0].imagePath})}"
+                         alt="Изображение выставки">
+                    <div th:unless="${(#authorization.expression('isAuthenticated()') and #authentication.name == exhibition.user.username and exhibition.artworks.size() > 0) or (exhibition.artworks.?[status == 'APPROVED'].size() > 0)}"
+                         class="placeholder-image">Нет работ</div>
+                </div>
+                <h3 th:text="${exhibition.title}"></h3>
+            </a>
+            <p>Автор: <a th:href="@{/user/profile/{id}(id=${exhibition.user.id})}"
+                     th:text="${exhibition.user.username}"></a></p>
+            <p th:text="${exhibition.authorOnly ? 'Приватная' : 'Публичная'}"></p>
+            <p th:text="${#authorization.expression('isAuthenticated()') and #authentication.name == exhibition.user.username ? exhibition.artworks.size() : exhibition.artworks.?[status == 'APPROVED'].size()} + ' работ'"></p>
+        </div>
+    </div>
+
+    <div th:replace="fragments/pagination :: pagination(${exhibitions}, '/exhibition/list')"></div>
+</div>
+
+<div th:replace="fragments/footer :: footer"></div>
+</body>
+</html>

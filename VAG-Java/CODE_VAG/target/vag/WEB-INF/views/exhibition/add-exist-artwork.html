@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title>Добавление работ в выставку - Виртуальная арт-галерея</title>
+    <link rel="stylesheet" th:href="@{/resources/css/style.css}">
+</head>
+<body>
+<div th:replace="fragments/header :: header"></div>
+
+<div class="container">
+    <h2>Добавление работ в выставку: <span th:text="${exhibition != null ? exhibition.title : 'Неизвестная выставка'}"></span></h2>
+    
+    <div class="mb-3">
+        <a th:href="@{/exhibition/details/{id}(id=${exhibition != null ? exhibition.id : 0})}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Вернуться к выставке
+        </a>
+    </div>
+
+    <div class="artwork-grid">
+        <div th:each="artwork : ${artworks}" class="artwork-card">
+            <a th:href="@{/artwork/details/{id}(id=${artwork != null ? artwork.id : 0})}">
+                <img th:if="${artwork != null and artwork.imagePath != null}" th:src="@{/uploads/{path}(path=${artwork.imagePath})}" 
+                     alt="Изображение работы">
+                <div th:unless="${artwork != null and artwork.imagePath != null}" class="placeholder-image">Нет изображения</div>
+                <h3 th:text="${artwork != null ? artwork.title : 'Без названия'}"></h3>
+            </a>
+            <p>Автор: <a th:if="${artwork != null and artwork.user != null}" 
+                         th:href="@{/user/profile/{id}(id=${artwork.user.id})}"
+                         th:text="${artwork.user.username}">Неизвестный автор</a>
+               <span th:unless="${artwork != null and artwork.user != null}">Неизвестный автор</span>
+            </p>
+            <p>
+                <span th:if="${artwork != null and artwork.status == 'APPROVED'}">Одобрена</span>
+                <span th:if="${artwork != null and artwork.status == 'PENDING'}">Ожидает проверки</span>
+                <span th:if="${artwork != null and artwork.status == 'REJECTED'}">Отклонена</span>
+                <span th:unless="${artwork != null}">Статус неизвестен</span>
+            </p>
+            
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="btn-group">
+                    <a th:href="@{/artwork/details/{id}(id=${artwork != null ? artwork.id : 0})}" 
+                       class="btn btn-sm btn-outline-secondary">Просмотр</a>
+                    
+                    <form th:if="${artwork != null and exhibition != null and !exhibitionArtworks.contains(artwork)}" 
+                          th:action="@{/exhibition/add-exist-artwork/{exhibitionId}/{artworkId}(exhibitionId=${exhibition.id},artworkId=${artwork.id})}" 
+                          method="post" style="display: inline;">
+                        <button type="submit" class="btn btn-sm btn-primary">Добавить</button>
+                    </form>
+                    
+                    <form th:if="${artwork != null and exhibition != null and exhibitionArtworks.contains(artwork)}" 
+                          th:action="@{/exhibition/remove-exist-artwork/{exhibitionId}/{artworkId}(exhibitionId=${exhibition.id},artworkId=${artwork.id})}" 
+                          method="post" style="display: inline;">
+                        <button type="submit" class="btn btn-sm btn-danger">Удалить</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="fragments/footer :: footer"></div>
+</body>
+</html> 

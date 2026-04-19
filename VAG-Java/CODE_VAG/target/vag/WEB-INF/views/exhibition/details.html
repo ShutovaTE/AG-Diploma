@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${exhibition.title} + ' - Виртуальная арт-галерея'"></title>
+    <link rel="stylesheet" th:href="@{/resources/css/style.css}">
+</head>
+<body>
+<div th:replace="fragments/header :: header"></div>
+
+<div class="container">
+    <div class="exhibition-header">
+        <h1 th:text="${exhibition.title}"></h1>
+        <p>Автор: <a th:href="@{/user/profile/{id}(id=${exhibition.user.id})}"
+                 th:text="${exhibition.user.username}"></a></p>
+        <p th:text="${exhibition.authorOnly ? 'Приватная' : 'Публичная'}"></p>
+
+        <div sec:authorize="isAuthenticated()">
+            <div th:if="${#authentication != null and #authentication.principal.username == exhibition.user.username}">
+                <a th:href="@{/exhibition/edit/{id}(id=${exhibition.id})}" class="btn btn-edit">Редактировать</a>
+                <form th:action="@{/exhibition/delete/{id}(id=${exhibition.id})}" method="post" style="display: inline;">
+                    <button type="submit" class="btn btn-delete">Удалить</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="exhibition-description" th:text="${exhibition.description}"></div>
+
+    <div class="exhibition-artworks">
+        <h2>Работы в этой выставке</h2>
+
+        <div sec:authorize="isAuthenticated()">
+            <div th:if="${#authentication != null and (not exhibition.authorOnly or #authentication.principal.username == exhibition.user.username)}">
+                <div class="btn-group">
+                    <a th:href="@{/artwork/create(exhibitionId=${exhibition.id})}" class="btn btn-primary">Добавить новую работу</a>
+                    <a th:href="@{/exhibition/add-exist-artwork/{exhibitionId}(exhibitionId=${exhibition.id})}" class="btn btn-primary">Добавить существующую работу</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="artwork-grid">
+            <div th:each="artwork : ${exhibition.artworks}" class="artwork-card" 
+                 th:if="${artwork.status == 'APPROVED'} or (${#authorization.expression('isAuthenticated()')} and ${#authentication.name} == ${artwork.user.username})">
+                <a th:href="@{/artwork/details/{id}(id=${artwork.id})}">
+                    <img th:src="@{/uploads/{path}(path=${artwork.imagePath})}" alt="Изображение работы">
+                    <h3 th:text="${artwork.title}"></h3>
+                </a>
+                <p>Автор: <a th:href="@{/user/profile/{id}(id=${artwork.user.id})}"
+                         th:text="${artwork.user.username}"></a></p>
+                <p>
+                    <span th:if="${artwork.status == 'APPROVED'}">Одобрена</span>
+                    <span th:if="${artwork.status == 'PENDING'}">Ожидает проверки</span>
+                    <span th:if="${artwork.status == 'REJECTED'}">Отклонена</span>
+                </p>
+
+                <div sec:authorize="isAuthenticated()">
+                    <div th:if="${#authentication.name} == ${exhibition.user.username} or ${#authentication.name} == ${artwork.user.username}">
+                        <form th:action="@{/exhibition/remove-artwork/{exhibitionId}/{artworkId}(exhibitionId=${exhibition.id}, artworkId=${artwork.id})}"
+                              method="post">
+                            <button type="submit" class="btn btn-sm btn-delete">Удалить</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div th:replace="fragments/pagination :: pagination(${artworks}, '/exhibition/details/' + ${exhibition.id})"></div>
+    </div>
+</div>
+
+<div th:replace="fragments/footer :: footer"></div>
+</body>
+</html>

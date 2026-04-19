@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Уведомления</title>
+    <link rel="stylesheet" th:href="@{/resources/css/style.css}">
+</head>
+<body>
+<div th:replace="fragments/header :: header"></div>
+
+<div class="container">
+    <h1>Все уведомления</h1>
+
+    <div th:if="${notifications.content.isEmpty()}" class="alert alert-success">
+        У вас пока нет уведомлений.
+    </div>
+
+    <div th:unless="${notifications.content.isEmpty()}" class="notifications-list">
+        <div th:each="notification : ${notifications.content}" class="notification-page-item">
+            <div class="notification-page-text" th:text="${notification.message}"></div>
+            <div class="notification-page-meta">
+                <span th:text="${#temporals.format(notification.createdAt, 'dd.MM.yyyy HH:mm')}"></span>
+                <a th:if="${notification.targetLink != null}" th:href="@{${notification.targetLink}}">Открыть публикацию</a>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="fragments/pagination :: pagination(${notifications}, '/user/notifications')"></div>
+</div>
+
+<div th:replace="fragments/footer :: footer"></div>
+</body>
+</html>

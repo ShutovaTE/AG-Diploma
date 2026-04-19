@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project name="maven-antrun-" default="main"  >
+<target name="main">
+  <copy file="D:\CODE_VAG\target/vag.war" todir="D:\Java\apache-tomcat-9.0.97\webapps"/>
+</target>
+</project>

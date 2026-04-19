@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title>Художники - Виртуальная арт-галерея</title>
+    <link rel="stylesheet" th:href="@{/resources/css/style.css}">
+</head>
+<body>
+<div th:replace="fragments/header :: header"></div>
+
+<div class="container">
+    <h1>Художники</h1>
+
+    <div class="user-grid">
+        <div th:each="user : ${users}" class="user-card">
+            <a th:href="@{/user/profile/{id}(id=${user.id})}">
+                <div class="user-info">
+                    <h3 th:text="${user.username}"></h3>
+                    <p>Одобренных работ: <span th:text="${user.artworks.?[status == 'APPROVED'].size()}"></span></p>
+                    <p>Выставок: <span th:text="${user.exhibitions.size()}"></span></p>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <div th:replace="fragments/pagination :: pagination(${users}, '/user/list')"></div>
+
+</div>
+
+<div th:replace="fragments/footer :: footer"></div>
+</body>
+</html>
