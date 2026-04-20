@@ -5,6 +5,7 @@ import com.example.vag.recommendation.service.RecommendationService;
 import com.example.vag.repository.*;
 import com.example.vag.service.ArtworkService;
 import com.example.vag.service.ExhibitionService;
+import com.example.vag.service.ModerationService;
 import com.example.vag.service.NotificationService;
 import com.example.vag.util.FileUploadUtil;
 import org.springframework.data.domain.Page;
@@ -13,6 +14,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
+import com.example.vag.dto.ModerationResult;
+import com.example.vag.service.ModerationService;
+import com.example.vag.service.impl.ImageHashService;
 
 import javax.persistence.EntityNotFoundException;
 import java.io.IOException;
@@ -35,6 +39,8 @@ public class ArtworkServiceImpl implements ArtworkService {
     private final ExhibitionService exhibitionService;
     private final NotificationService notificationService;
     private final RecommendationService recommendationService;
+    private final ModerationService moderationService;
+    private final ImageHashService imageHashService;
 
     public ArtworkServiceImpl(ArtworkRepository artworkRepository,
                               CategoryRepository categoryRepository,
@@ -43,7 +49,9 @@ public class ArtworkServiceImpl implements ArtworkService {
                               FileUploadUtil fileUploadUtil,
                               ExhibitionService exhibitionService,
                               NotificationService notificationService, 
-                              RecommendationService recommendationService) {
+                              RecommendationService recommendationService,
+                              ModerationService moderationService,
+                              ImageHashService imageHashService) {
         this.artworkRepository = artworkRepository;
         this.categoryRepository = categoryRepository;
         this.commentRepository = commentRepository;
@@ -52,6 +60,8 @@ public class ArtworkServiceImpl implements ArtworkService {
         this.exhibitionService = exhibitionService;
         this.notificationService = notificationService;
         this.recommendationService = recommendationService;
+        this.moderationService = moderationService;
+        this.imageHashService = imageHashService;
     }
 
     @Override
@@ -61,12 +71,15 @@ public class ArtworkServiceImpl implements ArtworkService {
 
     @Override
     public Artwork create(Artwork artwork, MultipartFile imageFile, User user) throws IOException {
+        // 1. Запускаем AI-модерацию
+        ModerationResult moderationResult = moderationService.moderateImage(imageFile, null);
+
         List<Category> categories = categoryRepository.findAllByIds(artwork.getCategoryIds());
         artwork.setCategories(new HashSet<>(categories));
 
         String originalFileName = StringUtils.cleanPath(imageFile.getOriginalFilename());
         String safeFileName = originalFileName
-                .replace(" ", "_")          // Замена пробелов
+                .replace(" ", "_")
                 .replaceAll("[^a-zA-Z0-9._-]", "");
 
         String relativePath = "artwork-images/" + user.getId() + "/" + safeFileName;
@@ -76,12 +89,51 @@ public class ArtworkServiceImpl implements ArtworkService {
 
         artwork.setDateCreation(LocalDate.now());
         artwork.setUser(user);
-        artwork.setStatus(Artwork.ArtworkStatus.PENDING.name());
         artwork.setLikes(0);
         artwork.setViews(0);
-        return artworkRepository.save(artwork);
-    }
 
+        // 2. Устанавливаем статус на основе результата модерации
+        if (!moderationResult.isApproved()) {
+            if (moderationResult.isNeedsManualReview()) {
+                artwork.setStatus(Artwork.ArtworkStatus.PENDING.name());
+                artwork.setRejectionReason("Требуется ручная проверка: " + moderationResult.getManualReviewReason());
+            } else {
+                artwork.setStatus(Artwork.ArtworkStatus.REJECTED.name());
+                artwork.setRejectionReason(moderationResult.getRejectionReason());
+            }
+        } else {
+            artwork.setStatus(Artwork.ArtworkStatus.APPROVED.name());
+        }
+
+        Artwork saved = artworkRepository.save(artwork);
+
+        // 3. Сохраняем хеш для будущих проверок (если не отклонено)
+        if (!Artwork.ArtworkStatus.REJECTED.name().equals(saved.getStatus())) {
+            try {
+                imageHashService.saveHash(saved, imageFile);
+            } catch (Exception e) {
+                System.err.println("Не удалось сохранить хеш изображения: " + e.getMessage());
+            }
+        }
+
+        // 4. Отправляем уведомление
+        if (Artwork.ArtworkStatus.APPROVED.name().equals(saved.getStatus())) {
+            notificationService.create(user,
+                    "Ваша публикация \"" + saved.getTitle() + "\" прошла автоматическую проверку и опубликована.",
+                    "/artwork/details/" + saved.getId());
+        } else if (Artwork.ArtworkStatus.REJECTED.name().equals(saved.getStatus())) {
+            notificationService.create(user,
+                    "Ваша публикация \"" + saved.getTitle() + "\" отклонена: " + saved.getRejectionReason(),
+                    "/artwork/details/" + saved.getId());
+        } else {
+            notificationService.create(user,
+                    "Ваша публикация \"" + saved.getTitle() + "\" отправлена на модерацию. " + saved.getRejectionReason(),
+                    "/artwork/details/" + saved.getId());
+        }
+
+        recommendationService.clearModelCache();
+        return saved;
+    }
     @Override
     @Transactional(readOnly = true)
     public Page<Artwork> findPaginatedApprovedArtworks(Pageable pageable) {
@@ -123,6 +175,7 @@ public class ArtworkServiceImpl implements ArtworkService {
 
     @Override
     public void delete(Artwork artwork) {
+        imageHashService.deleteByArtworkId(artwork.getId());
         Artwork artworkWithExhibitions = artworkRepository.findById(artwork.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Произведение искусства не найдено"));
 

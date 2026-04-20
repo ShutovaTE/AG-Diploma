@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<testsuite tests="3" failures="0" name="com.example.vag.recommendation.service.RecommendationServiceImplTest" time="0.227" errors="0" skipped="0">
+<testsuite tests="3" failures="0" name="com.example.vag.recommendation.service.RecommendationServiceImplTest" time="0.386" errors="0" skipped="0">
   <properties>
     <property name="idea.version" value="2022.2"/>
     <property name="java.runtime.name" value="OpenJDK Runtime Environment"/>
     <property name="java.vm.version" value="17.0.13+11-LTS"/>
     <property name="sun.boot.library.path" value="C:\Users\user\.jdks\corretto-17.0.13\bin"/>
-    <property name="maven.multiModuleProjectDirectory" value="C:\Users\user\Desktop\AG-Diploma\VAG-Java\CODE_VAG"/>
+    <property name="maven.multiModuleProjectDirectory" value="D:\CODE_VAG"/>
     <property name="java.vm.vendor" value="Amazon.com Inc."/>
     <property name="java.vendor.url" value="https://aws.amazon.com/corretto/"/>
     <property name="guice.disable.misplaced.annotation.check" value="true"/>
@@ -16,7 +16,7 @@
     <property name="user.country" value="RU"/>
     <property name="sun.java.launcher" value="SUN_STANDARD"/>
     <property name="java.vm.specification.name" value="Java Virtual Machine Specification"/>
-    <property name="user.dir" value="C:\Users\user\Desktop\AG-Diploma\VAG-Java\CODE_VAG"/>
+    <property name="user.dir" value="D:\CODE_VAG"/>
     <property name="java.vm.compressedOopsMode" value="Zero based"/>
     <property name="java.runtime.version" value="17.0.13+11-LTS"/>
     <property name="os.arch" value="amd64"/>
@@ -62,7 +62,7 @@
     <property name="java.vendor.version" value="Corretto-17.0.13.11.1"/>
     <property name="sun.cpu.isalist" value="amd64"/>
   </properties>
-  <testcase classname="com.example.vag.recommendation.service.RecommendationServiceImplTest" name="testDefaultTopN" time="0.223"/>
+  <testcase classname="com.example.vag.recommendation.service.RecommendationServiceImplTest" name="testDefaultTopN" time="0.382"/>
   <testcase classname="com.example.vag.recommendation.service.RecommendationServiceImplTest" name="testGetRecommendationsWhenScriptUnavailable" time="0.002"/>
   <testcase classname="com.example.vag.recommendation.service.RecommendationServiceImplTest" name="testIsRecommendationSystemUnavailable" time="0.002"/>
 </testsuite>

@@ -20,7 +20,7 @@
         http://www.springframework.org/schema/security/spring-security.xsd">
 
     <context:component-scan base-package="com.example.vag"/>
-    <context:property-placeholder location="classpath:minio.properties"/>
+    <context:property-placeholder location="classpath:minio.properties,classpath:api.properties"/>
 
     <jpa:repositories base-package="com.example.vag.repository"/>
 
@@ -118,7 +118,6 @@
         <security:intercept-url pattern="/resources/**" access="permitAll"/>
         <security:intercept-url pattern="/uploads/**" access="permitAll"/>
 
-
         <security:intercept-url pattern="/artwork/details/**" access="permitAll"/>
         <security:intercept-url pattern="/exhibition/details/**" access="permitAll"/>
         <security:intercept-url pattern="/user/profile/**" access="permitAll"/>
@@ -157,31 +156,24 @@
 
         <security:access-denied-handler error-page="/auth/access-denied"/>
     </security:http>
+
     <security:authentication-manager>
         <security:authentication-provider user-service-ref="userDetailsService">
             <security:password-encoder ref="passwordEncoder"/>
         </security:authentication-provider>
     </security:authentication-manager>
 
+
     <bean id="passwordEncoder" class="org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder"/>
-    <bean id="databaseInitializer" class="org.springframework.context.support.ApplicationListenerDetector"/>
 
     <bean id="userDetailsService" class="com.example.vag.service.impl.UserDetailsServiceImpl">
         <constructor-arg ref="userRepository"/>
     </bean>
 
-
     <bean id="userService" class="com.example.vag.service.impl.UserServiceImpl">
         <constructor-arg ref="userRepository"/>
         <constructor-arg ref="roleRepository"/>
         <constructor-arg ref="passwordEncoder"/>
-    </bean>
-
-    <bean id="artworkService" class="com.example.vag.service.impl.ArtworkServiceImpl">
-        <constructor-arg ref="artworkRepository"/>
-        <constructor-arg ref="categoryRepository"/>
-        <constructor-arg ref="likeRepository"/>
-        <constructor-arg ref="fileUploadUtil"/>
     </bean>
 
     <bean id="categoryService" class="com.example.vag.service.impl.CategoryServiceImpl">
@@ -192,20 +184,57 @@
         <constructor-arg ref="exhibitionRepository"/>
     </bean>
 
+    <bean id="notificationService" class="com.example.vag.service.impl.NotificationServiceImpl">
+        <constructor-arg ref="notificationRepository"/>
+    </bean>
+
+    <bean id="yandexVisionService" class="com.example.vag.service.impl.YandexVisionService"/>
+
+    <bean id="imageHashService" class="com.example.vag.service.impl.ImageHashService">
+        <constructor-arg ref="imageHashRepository"/>
+    </bean>
+
+<!--
+    <bean id="nsfwService" class="com.example.vag.service.impl.NSFWDetectionService"/>
+-->
+    <bean id="nsfwService" class="com.example.vag.service.impl.NSFWDetectionService">
+        <constructor-arg ref="fileUploadUtil"/>
+    </bean>
+
+    <bean id="moderationService" class="com.example.vag.service.impl.ModerationServiceImpl">
+        <constructor-arg ref="yandexVisionService"/>
+        <constructor-arg ref="imageHashService"/>
+        <constructor-arg ref="nsfwService"/>
+    </bean>
+
+
+    <bean id="artworkService" class="com.example.vag.service.impl.ArtworkServiceImpl">
+        <constructor-arg ref="artworkRepository"/>
+        <constructor-arg ref="categoryRepository"/>
+        <constructor-arg ref="commentRepository"/>
+        <constructor-arg ref="likeRepository"/>
+        <constructor-arg ref="fileUploadUtil"/>
+        <constructor-arg ref="exhibitionService"/>
+        <constructor-arg ref="notificationService"/>
+        <constructor-arg ref="recommendationService"/>
+        <constructor-arg ref="moderationService"/>
+        <constructor-arg ref="imageHashService"/>
+    </bean>
+
+
     <bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
         <property name="maxUploadSize" value="-1"/>
     </bean>
 
-    <!-- Модуль рекомендаций -->
     <bean id="recommendationService" class="com.example.vag.recommendation.service.RecommendationServiceImpl">
-        <constructor-arg value="python" />
-        <constructor-arg value="D:/Git/AG-Diploma/VAG-Java/ML-Recommendation/recommendation_engine.py" />
+        <constructor-arg value="python"/>
+        <constructor-arg value="D:/Git/AG-Diploma/VAG-Java/ML-Recommendation/recommendation_engine.py"/>
     </bean>
 
-    <bean id="recommendationController" 
-        class="com.example.vag.recommendation.controller.RecommendationController">
-        <constructor-arg ref="recommendationService" />
-        <constructor-arg ref="userService" />
+    <bean id="recommendationController"
+          class="com.example.vag.recommendation.controller.RecommendationController">
+        <constructor-arg ref="recommendationService"/>
+        <constructor-arg ref="userService"/>
     </bean>
 
 </beans>

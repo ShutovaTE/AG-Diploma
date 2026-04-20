@@ -1,13 +1,12 @@
 package com.example.vag.controller;
 
+import com.example.vag.dto.ModerationResult;
 import com.example.vag.model.Artwork;
 import com.example.vag.model.Category;
 import com.example.vag.model.Exhibition;
 import com.example.vag.model.User;
-import com.example.vag.service.ArtworkService;
-import com.example.vag.service.CategoryService;
-import com.example.vag.service.ExhibitionService;
-import com.example.vag.service.UserService;
+import com.example.vag.service.*;
+import com.example.vag.util.FileUploadUtil;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -15,9 +14,17 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+
 import javax.validation.Valid;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,12 +39,18 @@ public class AdminController {
     private final CategoryService categoryService;
     private final ExhibitionService exhibitionService;
 
+    private final ModerationService moderationService;
+    private final FileUploadUtil fileUploadUtil;
+
     public AdminController(UserService userService, ArtworkService artworkService,
-                           CategoryService categoryService, ExhibitionService exhibitionService) {
+                           CategoryService categoryService, ExhibitionService exhibitionService,
+                           ModerationService moderationService, FileUploadUtil fileUploadUtil) {
         this.userService = userService;
         this.artworkService = artworkService;
         this.categoryService = categoryService;
         this.exhibitionService = exhibitionService;
+        this.moderationService = moderationService;
+        this.fileUploadUtil = fileUploadUtil;
     }
 
     @GetMapping("/users")
@@ -45,6 +58,84 @@ public class AdminController {
         List<User> users = userService.findAll();
         model.addAttribute("users", users);
         return "admin/users";
+    }
+
+    @PostMapping("/artworks/recheck/{id}")
+    public String recheckArtwork(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        try {
+            Artwork artwork = artworkService.findById(id).orElseThrow();
+
+            // Получаем файл из MinIO как массив байтов
+            InputStream inputStream = fileUploadUtil.getFile(artwork.getImagePath());
+            byte[] bytes = inputStream.readAllBytes();
+            inputStream.close();
+
+            String filename = artwork.getImagePath().substring(artwork.getImagePath().lastIndexOf('/') + 1);
+
+            // Создаём MultipartFile через анонимный класс (без MockMultipartFile)
+            MultipartFile multipartFile = new MultipartFile() {
+                @Override
+                public String getName() {
+                    return "imageFile";
+                }
+
+                @Override
+                public String getOriginalFilename() {
+                    return filename;
+                }
+
+                @Override
+                public String getContentType() {
+                    try {
+                        return Files.probeContentType(Paths.get(artwork.getImagePath()));
+                    } catch (IOException e) {
+                        return "image/jpeg";
+                    }
+                }
+
+                @Override
+                public boolean isEmpty() {
+                    return bytes == null || bytes.length == 0;
+                }
+
+                @Override
+                public long getSize() {
+                    return bytes.length;
+                }
+
+                @Override
+                public byte[] getBytes() throws IOException {
+                    return bytes;
+                }
+
+                @Override
+                public InputStream getInputStream() throws IOException {
+                    return new ByteArrayInputStream(bytes);
+                }
+
+                @Override
+                public void transferTo(File dest) throws IOException, IllegalStateException {
+                    Files.write(dest.toPath(), bytes);
+                }
+            };
+
+            ModerationResult result = moderationService.moderateImage(multipartFile, artwork.getId());
+
+            if (result.isApproved()) {
+                artworkService.approveArtwork(id);
+                redirectAttributes.addFlashAttribute("message", "Изображение прошло повторную проверку и одобрено");
+            } else if (result.isNeedsManualReview()) {
+                redirectAttributes.addFlashAttribute("warning",
+                        "Требуется ручная проверка: " + result.getManualReviewReason());
+            } else {
+                artworkService.rejectArtwork(id, result.getRejectionReason());
+                redirectAttributes.addFlashAttribute("message", "Изображение отклонено: " + result.getRejectionReason());
+            }
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Ошибка при проверке: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return "redirect:/admin/artworks";
     }
 
     @GetMapping("/artworks")
