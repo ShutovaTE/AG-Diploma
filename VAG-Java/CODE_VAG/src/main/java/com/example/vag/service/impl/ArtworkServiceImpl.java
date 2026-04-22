@@ -175,7 +175,12 @@ public class ArtworkServiceImpl implements ArtworkService {
 
     @Override
     public void delete(Artwork artwork) {
-        imageHashService.deleteByArtworkId(artwork.getId());
+        try {
+            imageHashService.deleteByArtworkId(artwork.getId());
+        } catch (Exception e) {
+            System.err.println("Ошибка при удалении хеша: " + e.getMessage());
+        }
+
         Artwork artworkWithExhibitions = artworkRepository.findById(artwork.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Произведение искусства не найдено"));
 
@@ -186,14 +191,21 @@ public class ArtworkServiceImpl implements ArtworkService {
 
         String imagePath = artworkWithExhibitions.getImagePath();
         if (imagePath != null && !imagePath.isBlank()) {
-            try {
-                fileUploadUtil.deleteFile(imagePath);
-            } catch (IOException e) {
-                throw new RuntimeException("Ошибка удаления файла из MinIO: " + imagePath, e);
+            long referenceCount = artworkRepository.countByImagePath(imagePath);
+            if (referenceCount <= 1) {
+                try {
+                    fileUploadUtil.deleteFile(imagePath);
+                    System.out.println("Файл удалён из MinIO: " + imagePath);
+                } catch (IOException e) {
+                    throw new RuntimeException("Ошибка удаления файла из MinIO: " + imagePath, e);
+                }
+            } else {
+                System.out.println(" Файл не удалён, на него ссылаются " + referenceCount + " публикаций: " + imagePath);
             }
         }
 
         artworkRepository.delete(artworkWithExhibitions);
+
         recommendationService.clearModelCache();
     }
 
@@ -204,6 +216,7 @@ public class ArtworkServiceImpl implements ArtworkService {
         artwork.setStatus(Artwork.ArtworkStatus.APPROVED.name());
         artwork.setRejectionReason(null); // Очищаем причину отклонения при одобрении
         artworkRepository.save(artwork);
+        imageHashService.activateByArtworkId(artworkId);
         notificationService.create(
                 artwork.getUser(),
                 "Ваша публикация \"" + artwork.getTitle() + "\" была одобрена.",

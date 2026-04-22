@@ -29,6 +29,9 @@ public class ImageHash {
     @Column(nullable = false, length = 32)
     private String md5;
 
+    @Column(nullable = false)
+    private boolean active = true;
+
     public ImageHash(Artwork artwork, String pHash, String md5) {
         this.artwork = artwork;
         this.pHash = pHash;

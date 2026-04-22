@@ -16,9 +16,9 @@ public interface ImageHashRepository extends JpaRepository<ImageHash, Long> {
 
     Optional<ImageHash> findByMd5(String md5);
 
-    @Query("SELECT h FROM ImageHash h WHERE h.artwork.status = 'APPROVED'")
-    List<ImageHash> findAllApprovedHashes();
+    @Query("SELECT h FROM ImageHash h WHERE h.active = true AND h.artwork.status = 'APPROVED'")
+    List<ImageHash> findAllActiveHashes();
 
-    @Query("SELECT h FROM ImageHash h WHERE h.artwork.status = 'APPROVED' AND h.artwork.id <> :excludeArtworkId")
-    List<ImageHash> findApprovedHashesExcluding(@Param("excludeArtworkId") Long excludeArtworkId);
+    @Query("SELECT h FROM ImageHash h WHERE h.active = true AND h.artwork.status = 'APPROVED' AND h.artwork.id <> :excludeArtworkId")
+    List<ImageHash> findAllActiveHashesExcluding(@Param("excludeArtworkId") Long excludeArtworkId);
 }

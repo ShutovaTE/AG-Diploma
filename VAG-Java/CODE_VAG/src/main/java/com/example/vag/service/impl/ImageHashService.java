@@ -25,19 +25,38 @@ public class ImageHashService {
         String pHash = HashUtils.computePHash(file);
         String md5 = HashUtils.computeMD5(file);
         ImageHash hash = new ImageHash(artwork, pHash, md5);
+        hash.setActive(true);
         return imageHashRepository.save(hash);
+    }
+
+    @Transactional
+    public void deactivateByArtworkId(Long artworkId) {
+        imageHashRepository.findByArtworkId(artworkId).ifPresent(hash -> {
+            hash.setActive(false);
+            imageHashRepository.save(hash);
+        });
+    }
+
+    @Transactional
+    public void activateByArtworkId(Long artworkId) {
+        imageHashRepository.findByArtworkId(artworkId).ifPresent(hash -> {
+            hash.setActive(true);
+            imageHashRepository.save(hash);
+        });
     }
 
     public boolean isExactDuplicate(MultipartFile file) throws IOException {
         String md5 = HashUtils.computeMD5(file);
-        return imageHashRepository.findByMd5(md5).isPresent();
+        return imageHashRepository.findByMd5(md5)
+                .filter(ImageHash::isActive)
+                .isPresent();
     }
 
     public boolean isSimilarToExisting(MultipartFile file, Long excludeArtworkId) throws IOException {
         String newHash = HashUtils.computePHash(file);
         if (newHash == null) return false;
 
-        List<ImageHash> existingHashes = imageHashRepository.findApprovedHashesExcluding(excludeArtworkId);
+        List<ImageHash> existingHashes = imageHashRepository.findAllActiveHashesExcluding(excludeArtworkId);
         for (ImageHash existing : existingHashes) {
             if (existing.getPHash() != null && HashUtils.isSimilar(newHash, existing.getPHash(), 10)) {
                 return true;
@@ -45,7 +64,6 @@ public class ImageHashService {
         }
         return false;
     }
-
     @Transactional
     public void deleteByArtworkId(Long artworkId) {
         imageHashRepository.findByArtworkId(artworkId)

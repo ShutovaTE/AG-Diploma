@@ -108,4 +108,7 @@ public interface ArtworkRepository extends JpaRepository<Artwork, Long> {
     @Query(value = "SELECT a FROM Artwork a WHERE a.status = :status",
            countQuery = "SELECT COUNT(a) FROM Artwork a WHERE a.status = :status")
     Page<Artwork> findByStatusPaginated(@Param("status") String status, Pageable pageable);
+
+    @Query("SELECT COUNT(a) FROM Artwork a WHERE a.imagePath = :imagePath")
+    long countByImagePath(@Param("imagePath") String imagePath);
 }
