@@ -1,17 +1,18 @@
 package com.example.vag.controller;
 
+import com.example.vag.dto.ModerationResult;
 import com.example.vag.model.Artwork;
 import com.example.vag.model.*;
-import com.example.vag.service.ArtworkService;
-import com.example.vag.service.CategoryService;
-import com.example.vag.service.UserService;
-import com.example.vag.service.ExhibitionService;
+import com.example.vag.service.*;
+import com.example.vag.service.impl.ImageHashService;
 import com.example.vag.util.FileUploadUtil;
+import com.example.vag.util.HashUtils;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
@@ -23,9 +24,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import javax.validation.Valid;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
+import java.util.*;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
@@ -37,13 +36,22 @@ public class ArtworkController {
     private final CategoryService categoryService;
     private final UserService userService;
     private final ExhibitionService exhibitionService;
+    private final ModerationService moderationService;
+    private final ImageHashService imageHashService;
+    private final NotificationService notificationService;
     private final FileUploadUtil fileUploadUtil;
 
-    public ArtworkController(ArtworkService artworkService, CategoryService categoryService, UserService userService, ExhibitionService exhibitionService, FileUploadUtil fileUploadUtil) {
+    public ArtworkController(ArtworkService artworkService, CategoryService categoryService,
+                             UserService userService, ExhibitionService exhibitionService,
+                             ModerationService moderationService, ImageHashService imageHashService,
+                             NotificationService notificationService, FileUploadUtil fileUploadUtil) {
         this.artworkService = artworkService;
         this.categoryService = categoryService;
         this.userService = userService;
         this.exhibitionService = exhibitionService;
+        this.moderationService = moderationService;
+        this.imageHashService = imageHashService;
+        this.notificationService = notificationService;
         this.fileUploadUtil = fileUploadUtil;
     }
 
@@ -137,7 +145,7 @@ public class ArtworkController {
         return "redirect:/user/profile?created";
     }*/
 
-    @PostMapping("/create")
+   /* @PostMapping("/create")
     @Transactional
     public String createArtwork(
             @Valid @ModelAttribute("artwork") Artwork artwork,
@@ -209,7 +217,7 @@ public class ArtworkController {
 
         redirectAttributes.addFlashAttribute("message", "Произведение успешно опубликовано!");
         return "redirect:/user/profile?created";
-    }
+    }*/
 
     @GetMapping("/edit/{id}")
     public String showEditForm(@PathVariable Long id, Model model) {
@@ -284,6 +292,182 @@ public class ArtworkController {
 
         artworkService.save(existingArtwork);
         return "redirect:/user/profile?updated";
+    }
+
+    /**
+     * Возвращает presigned URL для прямой загрузки в MinIO.
+     */
+    @GetMapping("/upload-url")
+    @ResponseBody
+    public ResponseEntity<Map<String, String>> getUploadUrl(
+            @RequestParam String fileName,
+            @RequestParam String contentType) {
+
+        User currentUser = userService.getCurrentUser();
+        if (currentUser == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        if (!isValidImageType(contentType)) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        // Генерируем UUID ТОЛЬКО ОДИН РАЗ
+        String uuid = UUID.randomUUID().toString();
+        String safeFileName = uuid + "_" + fileName.replaceAll("[^a-zA-Z0-9._-]", "_");
+        String objectKey = "artwork-images/" + currentUser.getId() + "/" + safeFileName;
+
+        System.out.println("📤 Генерация presigned URL для: " + objectKey);
+
+        // Генерируем presigned URL для ЭТОГО же objectKey
+        String presignedUrl = fileUploadUtil.generatePresignedUrlForObject(objectKey, contentType);
+
+        Map<String, String> response = new HashMap<>();
+        response.put("presignedUrl", presignedUrl);
+        response.put("objectKey", objectKey);
+        response.put("safeFileName", safeFileName);
+        response.put("publicUrl", fileUploadUtil.getPublicUrl(objectKey));
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Создание публикации с уже загруженным в MinIO файлом.
+     */
+    @PostMapping("/create")
+    @Transactional
+    public String createArtwork(
+            @Valid @ModelAttribute("artwork") Artwork artwork,
+            BindingResult bindingResult,
+            @RequestParam("categoryIds") List<Long> categoryIds,
+            @RequestParam("imagePath") String imagePath,
+            @RequestParam("safeFileName") String safeFileName,
+            @RequestParam(required = false) Long exhibitionId,
+            Model model,
+            RedirectAttributes redirectAttributes) {
+
+        User currentUser = userService.getCurrentUser();
+        if (currentUser == null) {
+            return "redirect:/auth/login";
+        }
+
+        if (bindingResult.hasErrors()) {
+            model.addAttribute("categories", categoryService.findAll());
+            model.addAttribute("selectedCategoryIds", categoryIds);
+            model.addAttribute("exhibitionId", exhibitionId);
+            return "artwork/create";
+        }
+
+        if (imagePath == null || imagePath.isEmpty()) {
+            redirectAttributes.addFlashAttribute("error", "Необходимо загрузить изображение");
+            return "redirect:/artwork/create";
+        }
+
+        try {
+            System.out.println("Загрузка файла из MinIO: " + imagePath);
+
+            // Небольшая задержка для гарантии сохранения в MinIO
+            Thread.sleep(500);
+
+            MultipartFile imageFile = fileUploadUtil.getAsMultipartFile(imagePath, safeFileName);
+
+            // ✅ ПРОВЕРКА НА ПОВТОРНУЮ ОТПРАВКУ
+            String md5 = HashUtils.computeMD5(imageFile);
+
+            // Проверяем, нет ли такого же файла, загруженного этим пользователем за последние 60 секунд
+            List<Artwork> recentArtworks = artworkService.findByUser(currentUser, PageRequest.of(0, 5))
+                    .getContent();
+
+            for (Artwork recent : recentArtworks) {
+                if (recent.getImagePath() != null && recent.getImagePath().equals(imagePath)) {
+                    System.out.println("⚠Обнаружена повторная отправка формы!");
+                    redirectAttributes.addFlashAttribute("warning",
+                            "Эта публикация уже создана. Проверьте ваш профиль.");
+                    return "redirect:/user/profile";
+                }
+            }
+
+            System.out.println("Файл получен из MinIO: " + imageFile.getSize() + " байт");
+
+            List<Category> categories = categoryService.findAllByIds(categoryIds);
+            artwork.setCategories(new HashSet<>(categories));
+            artwork.setImagePath(imagePath);
+            artwork.setDateCreation(java.time.LocalDate.now());
+            artwork.setUser(currentUser);
+            artwork.setLikes(0);
+            artwork.setViews(0);
+
+            // AI-модерация
+            ModerationResult moderationResult = moderationService.moderateImage(imageFile, null);
+
+            if (!moderationResult.isApproved()) {
+                if (moderationResult.isNeedsManualReview()) {
+                    artwork.setStatus(Artwork.ArtworkStatus.PENDING.name());
+                    artwork.setRejectionReason("Требуется ручная проверка: " + moderationResult.getManualReviewReason());
+                } else {
+                    artwork.setStatus(Artwork.ArtworkStatus.REJECTED.name());
+                    artwork.setRejectionReason(moderationResult.getRejectionReason());
+                }
+            } else {
+                artwork.setStatus(Artwork.ArtworkStatus.APPROVED.name());
+            }
+
+            Artwork saved = artworkService.save(artwork);
+
+            // Сохраняем хеш
+            if (!Artwork.ArtworkStatus.REJECTED.name().equals(saved.getStatus())) {
+                try {
+                    imageHashService.saveHash(saved, imageFile);
+                } catch (Exception e) {
+                    System.err.println("Не удалось сохранить хеш: " + e.getMessage());
+                }
+            }
+
+            // Уведомление
+            if (Artwork.ArtworkStatus.APPROVED.name().equals(saved.getStatus())) {
+                notificationService.create(currentUser,
+                        "Ваша публикация \"" + saved.getTitle() + "\" прошла проверку и опубликована.",
+                        "/artwork/details/" + saved.getId());
+            } else if (Artwork.ArtworkStatus.REJECTED.name().equals(saved.getStatus())) {
+                notificationService.create(currentUser,
+                        "Ваша публикация \"" + saved.getTitle() + "\" отклонена: " + saved.getRejectionReason(),
+                        "/artwork/details/" + saved.getId());
+            } else {
+                notificationService.create(currentUser,
+                        "Ваша публикация \"" + saved.getTitle() + "\" отправлена на модерацию.",
+                        "/artwork/details/" + saved.getId());
+            }
+
+            if (exhibitionId != null) {
+                Exhibition exhibition = exhibitionService.findById(exhibitionId).orElseThrow();
+                if (!exhibition.isAuthorOnly() || currentUser.getId().equals(exhibition.getUser().getId())) {
+                    exhibition.getArtworks().add(saved);
+                    saved.getExhibitions().add(exhibition);
+                    exhibitionService.save(exhibition);
+                    artworkService.save(saved);
+                    return "redirect:/exhibition/details/" + exhibitionId;
+                }
+            }
+
+            redirectAttributes.addFlashAttribute("message", "Произведение успешно опубликовано!");
+            return "redirect:/user/profile?created";
+
+        } catch (IOException e) {
+            System.err.println("Ошибка: " + e.getMessage());
+            redirectAttributes.addFlashAttribute("error", "Ошибка при загрузке: " + e.getMessage());
+            return "redirect:/artwork/create";
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            redirectAttributes.addFlashAttribute("error", "Операция прервана");
+            return "redirect:/artwork/create";
+        }
+    }
+    private boolean isValidImageType(String contentType) {
+        return contentType != null && (
+                contentType.equals("image/jpeg") ||
+                        contentType.equals("image/png") ||
+                        contentType.equals("image/webp")
+        );
     }
 
     @PostMapping("/delete/{id}")

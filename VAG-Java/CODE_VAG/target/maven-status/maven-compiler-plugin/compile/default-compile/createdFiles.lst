@@ -1,4 +1,3 @@
-com\example\vag\util\UploadsInitializer.class
 com\example\vag\service\impl\ImageHashService.class
 com\example\vag\model\Category.class
 com\example\vag\service\impl\UserServiceImpl.class
@@ -24,6 +23,7 @@ com\example\vag\controller\AdminController.class
 com\example\vag\service\UserService.class
 com\example\vag\controller\ExhibitionController.class
 com\example\vag\controller\GlobalModelAttributes.class
+com\example\vag\dto\PresignedUploadResult.class
 com\example\vag\service\impl\ArtworkServiceImpl.class
 com\example\vag\model\Notification.class
 com\example\vag\controller\UploadController.class
@@ -52,6 +52,7 @@ com\example\vag\service\impl\YandexVisionService.class
 com\example\vag\service\impl\UserDetailsServiceImpl.class
 com\example\vag\model\Role.class
 com\example\vag\service\impl\NSFWDetectionService.class
+com\example\vag\util\FileUploadUtil$1.class
 com\example\vag\service\ArtworkService.class
 com\example\vag\dto\ModerationResult.class
 com\example\vag\model\User.class

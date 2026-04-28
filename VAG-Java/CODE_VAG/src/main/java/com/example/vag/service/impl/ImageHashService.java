@@ -52,14 +52,38 @@ public class ImageHashService {
                 .isPresent();
     }
 
-    public boolean isSimilarToExisting(MultipartFile file, Long excludeArtworkId) throws IOException {
+/*    public boolean isSimilarToExisting(MultipartFile file, Long excludeArtworkId) throws IOException {
         String newHash = HashUtils.computePHash(file);
         if (newHash == null) return false;
 
         List<ImageHash> existingHashes = imageHashRepository.findAllActiveHashesExcluding(excludeArtworkId);
         for (ImageHash existing : existingHashes) {
-            if (existing.getPHash() != null && HashUtils.isSimilar(newHash, existing.getPHash(), 10)) {
+            if (existing.getPHash() != null && HashUtils.isSimilar(newHash, existing.getPHash(), 8)) {
                 return true;
+            }
+        }
+        return false;
+    }*/
+
+    public boolean isSimilarToExisting(MultipartFile file, Long excludeArtworkId) throws IOException {
+        String newHash = HashUtils.computePHash(file);
+        if (newHash == null) return false;
+
+        System.out.println("pHash нового: " + newHash);
+
+        List<ImageHash> existingHashes = imageHashRepository.findAllActiveHashesExcluding(excludeArtworkId);
+
+        for (ImageHash existing : existingHashes) {
+            if (existing.getPHash() != null) {
+                int distance = HashUtils.hammingDistance(newHash, existing.getPHash());
+
+                System.out.println("     Сравнение с artwork #" + existing.getArtwork().getId()
+                        + " (pHash: " + existing.getPHash() + "): расстояние = " + distance);
+
+                if (distance <= 10) {
+                    System.out.println(" Найдено похожее! (расстояние " + distance + " ≤ 10)");
+                    return true;
+                }
             }
         }
         return false;

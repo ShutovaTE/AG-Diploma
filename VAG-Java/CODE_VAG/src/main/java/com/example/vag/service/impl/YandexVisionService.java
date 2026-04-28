@@ -7,6 +7,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -137,9 +141,43 @@ public class YandexVisionService {
         }
         return categories;
     }
+    private byte[] compressImage(MultipartFile file) throws IOException {
+        // Читаем изображение
+        BufferedImage image = ImageIO.read(file.getInputStream());
+        if (image == null) {
+            throw new IOException("Не удалось прочитать изображение");
+        }
+
+        // Максимальные размеры
+        int maxWidth = 1024;
+        int maxHeight = 1024;
+
+        // Изменяем размер, если нужно
+        int width = image.getWidth();
+        int height = image.getHeight();
+
+        if (width > maxWidth || height > maxHeight) {
+            double ratio = Math.min((double) maxWidth / width, (double) maxHeight / height);
+            int newWidth = (int) (width * ratio);
+            int newHeight = (int) (height * ratio);
+
+            Image scaledImage = image.getScaledInstance(newWidth, newHeight, Image.SCALE_SMOOTH);
+            BufferedImage newImage = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_RGB);
+            Graphics2D g = newImage.createGraphics();
+            g.drawImage(scaledImage, 0, 0, null);
+            g.dispose();
+            image = newImage;
+        }
+
+        // Сохраняем в JPEG с качеством 70%
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ImageIO.write(image, "jpg", baos);
+        return baos.toByteArray();
+    }
 
     private String encodeFileToBase64(MultipartFile file) throws IOException {
-        byte[] bytes = file.getBytes();
-        return Base64.getEncoder().encodeToString(bytes);
+        // Сжимаем перед кодированием
+        byte[] compressedBytes = compressImage(file);
+        return Base64.getEncoder().encodeToString(compressedBytes);
     }
 }
