@@ -65,71 +65,70 @@ public class AdminController {
         try {
             Artwork artwork = artworkService.findById(id).orElseThrow();
 
-            // Получаем файл из MinIO как массив байтов
+            // Получаем файл из MinIO
             InputStream inputStream = fileUploadUtil.getFile(artwork.getImagePath());
             byte[] bytes = inputStream.readAllBytes();
             inputStream.close();
 
             String filename = artwork.getImagePath().substring(artwork.getImagePath().lastIndexOf('/') + 1);
 
-            // Создаём MultipartFile через анонимный класс (без MockMultipartFile)
             MultipartFile multipartFile = new MultipartFile() {
                 @Override
-                public String getName() {
-                    return "imageFile";
-                }
+                public String getName() { return "imageFile"; }
 
                 @Override
-                public String getOriginalFilename() {
-                    return filename;
-                }
+                public String getOriginalFilename() { return filename; }
 
                 @Override
                 public String getContentType() {
-                    try {
-                        return Files.probeContentType(Paths.get(artwork.getImagePath()));
-                    } catch (IOException e) {
-                        return "image/jpeg";
+                    String ext = filename.substring(filename.lastIndexOf('.') + 1).toLowerCase();
+                    switch (ext) {
+                        case "webp": return "image/webp";
+                        case "png": return "image/png";
+                        default: return "image/jpeg";
                     }
                 }
 
                 @Override
-                public boolean isEmpty() {
-                    return bytes == null || bytes.length == 0;
-                }
+                public boolean isEmpty() { return bytes == null || bytes.length == 0; }
 
                 @Override
-                public long getSize() {
-                    return bytes.length;
-                }
+                public long getSize() { return bytes.length; }
 
                 @Override
-                public byte[] getBytes() throws IOException {
-                    return bytes;
-                }
+                public byte[] getBytes() { return bytes; }
 
                 @Override
-                public InputStream getInputStream() throws IOException {
-                    return new ByteArrayInputStream(bytes);
-                }
+                public InputStream getInputStream() { return new ByteArrayInputStream(bytes); }
 
                 @Override
-                public void transferTo(File dest) throws IOException, IllegalStateException {
+                public void transferTo(File dest) throws IOException {
                     Files.write(dest.toPath(), bytes);
                 }
             };
 
+            // Повторная модерация
             ModerationResult result = moderationService.moderateImage(multipartFile, artwork.getId());
+
+            // Сохраняем AI-отчёт в artwork
+            artwork.setAiReport(result.getAiReport());
+            artworkService.save(artwork);
 
             if (result.isApproved()) {
                 artworkService.approveArtwork(id);
-                redirectAttributes.addFlashAttribute("message", "Изображение прошло повторную проверку и одобрено");
+                redirectAttributes.addFlashAttribute("message",
+                        "Изображение прошло повторную проверку и одобрено");
             } else if (result.isNeedsManualReview()) {
                 redirectAttributes.addFlashAttribute("warning",
-                        "Требуется ручная проверка: " + result.getManualReviewReason());
+                        result.getManualReviewReason());
+
+                // Сохраняем причину в artwork
+                artwork.setRejectionReason("Требуется ручная проверка: " + result.getManualReviewReason());
+                artworkService.save(artwork);
             } else {
                 artworkService.rejectArtwork(id, result.getRejectionReason());
-                redirectAttributes.addFlashAttribute("message", "Изображение отклонено: " + result.getRejectionReason());
+                redirectAttributes.addFlashAttribute("message",
+                        result.getRejectionReason());
             }
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("error", "Ошибка при проверке: " + e.getMessage());

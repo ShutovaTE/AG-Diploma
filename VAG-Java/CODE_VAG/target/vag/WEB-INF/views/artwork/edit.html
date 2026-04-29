@@ -25,6 +25,11 @@
             <textarea id="description" th:field="*{description}" class="form-control"></textarea>
             <span th:if="${#fields.hasErrors('description')}" th:errors="*{description}" class="error"></span>
         </div>
+        <div class="form-group">
+            <label for="artistComment">Комментарий к повторной отправке</label>
+            <textarea id="artistComment" name="artistComment" class="form-control"
+                      placeholder="Поясните, почему вы отправляете работу повторно..."></textarea>
+        </div>
 
         <div class="form-group">
             <label for="categories">Категории</label>

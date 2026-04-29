@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 import com.example.vag.service.ExhibitionService;
 
 import java.util.List;
+import java.util.ArrayList;
 import java.util.stream.Collectors;
 
 @Controller
@@ -190,6 +191,37 @@ public class UserController {
         if (user != null) {
             notificationService.markAllAsRead(user);
         }
+    }
+
+    @PostMapping("/notifications/delete/{id}")
+    public String deleteNotification(@PathVariable("id") Long notificationId,
+                                     @RequestParam(defaultValue = "0") int page,
+                                     @RequestParam(defaultValue = "10") int size) {
+        User user = userService.getCurrentUser();
+        notificationService.deleteForUser(user, notificationId);
+        return "redirect:/user/notifications?page=" + page + "&size=" + size;
+    }
+
+    @PostMapping("/notifications/delete")
+    public String deleteNotifications(@RequestParam(defaultValue = "0") int page,
+                                      @RequestParam(defaultValue = "10") int size,
+                                      @RequestParam(value = "selectedIds", required = false) List<Long> selectedIds,
+                                      @RequestParam(value = "deleteAll", defaultValue = "false") boolean deleteAll,
+                                      Model model) {
+        User user = userService.getCurrentUser();
+
+        if (deleteAll) {
+            Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+            Page<com.example.vag.model.Notification> notificationsPage = notificationService.findAll(user, pageable);
+            List<Long> idsOnPage = notificationsPage.getContent().stream()
+                    .map(com.example.vag.model.Notification::getId)
+                    .collect(Collectors.toList());
+            notificationService.deleteForUser(user, idsOnPage);
+        } else {
+            notificationService.deleteForUser(user, selectedIds == null ? new ArrayList<>() : selectedIds);
+        }
+
+        return "redirect:/user/notifications?page=" + page + "&size=" + size;
     }
 
     @GetMapping("/list")

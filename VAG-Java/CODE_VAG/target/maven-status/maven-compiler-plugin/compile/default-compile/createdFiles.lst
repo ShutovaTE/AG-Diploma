@@ -30,6 +30,7 @@ com\example\vag\controller\UploadController.class
 com\example\vag\repository\UserRepository.class
 com\example\vag\service\CustomUserDetailsService.class
 com\example\vag\model\Exhibition.class
+com\example\vag\dto\SimilarArtworkInfo.class
 com\example\vag\repository\CategoryRepository.class
 com\example\vag\repository\ImageHashRepository.class
 com\example\vag\service\impl\ExhibitionServiceImpl.class

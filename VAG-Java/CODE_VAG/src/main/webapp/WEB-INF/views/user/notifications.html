@@ -4,6 +4,30 @@
     <meta charset="UTF-8">
     <title>Уведомления</title>
     <link rel="stylesheet" th:href="@{/resources/css/style.css}">
+    <style>
+        .notifications-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 14px;
+        }
+        .notification-row {
+            display: grid;
+            grid-template-columns: 24px 1fr;
+            gap: 12px;
+            align-items: start;
+        }
+        .notification-check {
+            margin-top: 3px;
+        }
+        .notification-bulk-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+    </style>
 </head>
 <body>
 <div th:replace="fragments/header :: header"></div>
@@ -16,18 +40,59 @@
     </div>
 
     <div th:unless="${notifications.content.isEmpty()}" class="notifications-list">
-        <div th:each="notification : ${notifications.content}" class="notification-page-item">
-            <div class="notification-page-text" th:text="${notification.message}"></div>
-            <div class="notification-page-meta">
-                <span th:text="${#temporals.format(notification.createdAt, 'dd.MM.yyyy HH:mm')}"></span>
-                <a th:if="${notification.targetLink != null}" th:href="@{${notification.targetLink}}">Открыть публикацию</a>
+        <form th:action="@{/user/notifications/delete}" method="post" id="bulkDeleteForm">
+            <input type="hidden" name="page" th:value="${notifications.number}">
+            <input type="hidden" name="size" th:value="${notifications.size}">
+
+            <div class="notifications-actions">
+                <label class="checkbox-label" style="margin: 0;">
+                    <input type="checkbox" id="selectAllNotifications">
+                    <span>Выбрать все на странице</span>
+                </label>
+                <div class="notification-bulk-actions">
+                    <button type="submit" class="btn btn-delete" style="margin: 0; padding: 7px 14px; border-radius: 8px; font-size: 13px;">
+                        Удалить выбранные
+                    </button>
+                    <button type="submit" name="deleteAll" value="true" class="btn btn-delete" style="margin: 0; padding: 7px 14px; border-radius: 8px; font-size: 13px;">
+                        Удалить все на странице
+                    </button>
+                </div>
             </div>
-        </div>
+
+            <div th:each="notification : ${notifications.content}" class="notification-page-item">
+                <div class="notification-row">
+                    <input class="notification-check" type="checkbox" name="selectedIds" th:value="${notification.id}">
+                    <div>
+                        <div class="notification-page-text" th:text="${notification.message}"></div>
+                        <div class="notification-page-meta">
+                            <span th:text="${#temporals.format(notification.createdAt, 'dd.MM.yyyy HH:mm')}"></span>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <a th:if="${notification.targetLink != null}" th:href="@{${notification.targetLink}}">Открыть публикацию</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
     </div>
 
     <div th:replace="fragments/pagination :: pagination(${notifications}, '/user/notifications')"></div>
 </div>
 
 <div th:replace="fragments/footer :: footer"></div>
+
+<script>
+    (function () {
+        var selectAll = document.getElementById('selectAllNotifications');
+        if (!selectAll) return;
+
+        var checks = document.querySelectorAll('.notification-check');
+        selectAll.addEventListener('change', function () {
+            checks.forEach(function (check) {
+                check.checked = selectAll.checked;
+            });
+        });
+    })();
+</script>
 </body>
 </html>

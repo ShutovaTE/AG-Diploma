@@ -61,6 +61,7 @@ public class ArtworkServiceImpl implements ArtworkService {
         this.notificationService = notificationService;
         this.recommendationService = recommendationService;
         this.moderationService = moderationService;
+
         this.imageHashService = imageHashService;
     }
 
@@ -71,7 +72,6 @@ public class ArtworkServiceImpl implements ArtworkService {
 
     @Override
     public Artwork create(Artwork artwork, MultipartFile imageFile, User user) throws IOException {
-        // 1. Запускаем AI-модерацию
         ModerationResult moderationResult = moderationService.moderateImage(imageFile, null);
 
         List<Category> categories = categoryRepository.findAllByIds(artwork.getCategoryIds());
@@ -92,14 +92,32 @@ public class ArtworkServiceImpl implements ArtworkService {
         artwork.setLikes(0);
         artwork.setViews(0);
 
-        // 2. Устанавливаем статус на основе результата модерации
+        // Сохраняем AI-отчёт
+        artwork.setAiReport(moderationResult.getAiReport());
+
+        // Сохраняем ID похожей работы
+        artwork.setSimilarArtworkId(moderationResult.getSimilarArtworkId());
+        artwork.setSimilarArtworkTitle(moderationResult.getSimilarArtworkTitle());
+
+        // Формируем причину для уведомления (чистый текст) и для админ-панели (HTML)
+        String reasonForUser = null;      // для уведомлений — без HTML
+        String reasonForAdmin = null;     // для админ-панели — с HTML-ссылкой
+
         if (!moderationResult.isApproved()) {
             if (moderationResult.isNeedsManualReview()) {
                 artwork.setStatus(Artwork.ArtworkStatus.PENDING.name());
-                artwork.setRejectionReason("Требуется ручная проверка: " + moderationResult.getManualReviewReason());
+
+                reasonForUser = moderationResult.getManualReviewReason();           // чистый текст
+                reasonForAdmin = moderationResult.getManualReviewReasonHtml();      // HTML с ссылкой
+
+                artwork.setRejectionReason(reasonForAdmin != null ? reasonForAdmin : reasonForUser);
             } else {
                 artwork.setStatus(Artwork.ArtworkStatus.REJECTED.name());
-                artwork.setRejectionReason(moderationResult.getRejectionReason());
+
+                reasonForUser = moderationResult.getRejectionReason();              // чистый текст
+                reasonForAdmin = moderationResult.getRejectionReasonHtml();         // HTML с ссылкой
+
+                artwork.setRejectionReason(reasonForAdmin != null ? reasonForAdmin : reasonForUser);
             }
         } else {
             artwork.setStatus(Artwork.ArtworkStatus.APPROVED.name());
@@ -107,7 +125,7 @@ public class ArtworkServiceImpl implements ArtworkService {
 
         Artwork saved = artworkRepository.save(artwork);
 
-        // 3. Сохраняем хеш для будущих проверок (если не отклонено)
+        // Сохраняем хеш
         if (!Artwork.ArtworkStatus.REJECTED.name().equals(saved.getStatus())) {
             try {
                 imageHashService.saveHash(saved, imageFile);
@@ -116,24 +134,26 @@ public class ArtworkServiceImpl implements ArtworkService {
             }
         }
 
-        // 4. Отправляем уведомление
+        // Уведомления — используем ЧИСТЫЙ ТЕКСТ (без HTML)
         if (Artwork.ArtworkStatus.APPROVED.name().equals(saved.getStatus())) {
             notificationService.create(user,
-                    "Ваша публикация \"" + saved.getTitle() + "\" прошла автоматическую проверку и опубликована.",
+                    "Ваша публикация \"" + saved.getTitle() + "\" прошла проверку и опубликована.",
                     "/artwork/details/" + saved.getId());
         } else if (Artwork.ArtworkStatus.REJECTED.name().equals(saved.getStatus())) {
             notificationService.create(user,
-                    "Ваша публикация \"" + saved.getTitle() + "\" отклонена: " + saved.getRejectionReason(),
+                    "Ваша публикация \"" + saved.getTitle() + "\" отклонена: " +
+                            (reasonForUser != null ? reasonForUser : saved.getRejectionReason()),
                     "/artwork/details/" + saved.getId());
         } else {
             notificationService.create(user,
-                    "Ваша публикация \"" + saved.getTitle() + "\" отправлена на модерацию. " + saved.getRejectionReason(),
+                    "Ваша публикация \"" + saved.getTitle() + "\" отправлена на модерацию.",
                     "/artwork/details/" + saved.getId());
         }
 
         recommendationService.clearModelCache();
         return saved;
     }
+
     @Override
     @Transactional(readOnly = true)
     public Page<Artwork> findPaginatedApprovedArtworks(Pageable pageable) {
@@ -214,9 +234,8 @@ public class ArtworkServiceImpl implements ArtworkService {
         Artwork artwork = artworkRepository.findById(artworkId)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid artwork ID"));
         artwork.setStatus(Artwork.ArtworkStatus.APPROVED.name());
-        artwork.setRejectionReason(null); // Очищаем причину отклонения при одобрении
+        artwork.setRejectionReason(null);
         artworkRepository.save(artwork);
-        imageHashService.activateByArtworkId(artworkId);
         notificationService.create(
                 artwork.getUser(),
                 "Ваша публикация \"" + artwork.getTitle() + "\" была одобрена.",

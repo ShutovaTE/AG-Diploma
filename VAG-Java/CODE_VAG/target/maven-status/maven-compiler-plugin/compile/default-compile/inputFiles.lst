@@ -48,6 +48,7 @@ C:\Users\user\Desktop\CODE_VAG\src\main\java\com\example\vag\model\Like.java
 C:\Users\user\Desktop\CODE_VAG\src\main\java\com\example\vag\controller\HomeController.java
 C:\Users\user\Desktop\CODE_VAG\src\main\java\com\example\vag\model\ImageHash.java
 C:\Users\user\Desktop\CODE_VAG\src\main\java\com\example\vag\repository\LikeRepository.java
+C:\Users\user\Desktop\CODE_VAG\src\main\java\com\example\vag\dto\SimilarArtworkInfo.java
 C:\Users\user\Desktop\CODE_VAG\src\main\java\com\example\vag\controller\UserController.java
 C:\Users\user\Desktop\CODE_VAG\src\main\java\com\example\vag\service\impl\NotificationServiceImpl.java
 C:\Users\user\Desktop\CODE_VAG\src\main\java\com\example\vag\model\Notification.java

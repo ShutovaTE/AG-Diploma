@@ -72,6 +72,18 @@ public class Artwork {
     @Column(nullable = false)
     private int views = 0;
 
+    @Column(columnDefinition = "TEXT")
+    private String aiReport;
+
+    @Column(columnDefinition = "TEXT")
+    private String artistComment;
+
+    @Column
+    private Long similarArtworkId;
+
+    @Column
+    private String similarArtworkTitle;
+
     @OneToMany(mappedBy = "artwork", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Like> artworkLikes;
 
@@ -135,6 +147,14 @@ public class Artwork {
         return status;
     }
 
+    public Long getSimilarArtworkId() { return similarArtworkId; }
+    public void setSimilarArtworkId(Long similarArtworkId) { this.similarArtworkId = similarArtworkId; }
+
+    public String getSimilarArtworkTitle() { return similarArtworkTitle; }
+    public void setSimilarArtworkTitle(String similarArtworkTitle) { this.similarArtworkTitle = similarArtworkTitle; }
+
+    public String getAiReport() { return aiReport; }
+    public void setAiReport(String aiReport) { this.aiReport = aiReport; }
     public String getRejectionReason() {
         return rejectionReason;
     }

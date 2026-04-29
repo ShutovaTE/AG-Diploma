@@ -257,6 +257,7 @@ public class ArtworkController {
             BindingResult bindingResult,
             @RequestParam("categoryIds") List<Long> categoryIds,
             @RequestParam(value = "imageFile", required = false) MultipartFile imageFile,
+            @RequestParam(value = "artistComment", required = false) String artistComment,
             Model model) throws IOException {
 
         if (bindingResult.hasErrors()) {
@@ -277,8 +278,12 @@ public class ArtworkController {
         existingArtwork.setCategories(new HashSet<>(categories));
         existingArtwork.setTitle(artwork.getTitle());
         existingArtwork.setDescription(artwork.getDescription());
-        
         existingArtwork.setStatus(Artwork.ArtworkStatus.PENDING.name());
+        existingArtwork.setRejectionReason(null);
+
+        if (artistComment != null && !artistComment.trim().isEmpty()) {
+            existingArtwork.setArtistComment(artistComment.trim());
+        }
 
         if (imageFile != null && !imageFile.isEmpty()) {
             String fileName = StringUtils.cleanPath(imageFile.getOriginalFilename());
@@ -364,30 +369,10 @@ public class ArtworkController {
         }
 
         try {
-            System.out.println("Загрузка файла из MinIO: " + imagePath);
-
-            // Небольшая задержка для гарантии сохранения в MinIO
-            Thread.sleep(500);
-
             MultipartFile imageFile = fileUploadUtil.getAsMultipartFile(imagePath, safeFileName);
 
-            // ✅ ПРОВЕРКА НА ПОВТОРНУЮ ОТПРАВКУ
-            String md5 = HashUtils.computeMD5(imageFile);
-
-            // Проверяем, нет ли такого же файла, загруженного этим пользователем за последние 60 секунд
-            List<Artwork> recentArtworks = artworkService.findByUser(currentUser, PageRequest.of(0, 5))
-                    .getContent();
-
-            for (Artwork recent : recentArtworks) {
-                if (recent.getImagePath() != null && recent.getImagePath().equals(imagePath)) {
-                    System.out.println("⚠Обнаружена повторная отправка формы!");
-                    redirectAttributes.addFlashAttribute("warning",
-                            "Эта публикация уже создана. Проверьте ваш профиль.");
-                    return "redirect:/user/profile";
-                }
-            }
-
-            System.out.println("Файл получен из MinIO: " + imageFile.getSize() + " байт");
+            // AI-модерация
+            ModerationResult moderationResult = moderationService.moderateImage(imageFile, null);
 
             List<Category> categories = categoryService.findAllByIds(categoryIds);
             artwork.setCategories(new HashSet<>(categories));
@@ -397,8 +382,8 @@ public class ArtworkController {
             artwork.setLikes(0);
             artwork.setViews(0);
 
-            // AI-модерация
-            ModerationResult moderationResult = moderationService.moderateImage(imageFile, null);
+            // СОХРАНЯЕМ AI-ОТЧЁТ
+            artwork.setAiReport(moderationResult.getAiReport());
 
             if (!moderationResult.isApproved()) {
                 if (moderationResult.isNeedsManualReview()) {
@@ -414,7 +399,6 @@ public class ArtworkController {
 
             Artwork saved = artworkService.save(artwork);
 
-            // Сохраняем хеш
             if (!Artwork.ArtworkStatus.REJECTED.name().equals(saved.getStatus())) {
                 try {
                     imageHashService.saveHash(saved, imageFile);
@@ -423,7 +407,7 @@ public class ArtworkController {
                 }
             }
 
-            // Уведомление
+            // Уведомления
             if (Artwork.ArtworkStatus.APPROVED.name().equals(saved.getStatus())) {
                 notificationService.create(currentUser,
                         "Ваша публикация \"" + saved.getTitle() + "\" прошла проверку и опубликована.",
@@ -453,12 +437,7 @@ public class ArtworkController {
             return "redirect:/user/profile?created";
 
         } catch (IOException e) {
-            System.err.println("Ошибка: " + e.getMessage());
             redirectAttributes.addFlashAttribute("error", "Ошибка при загрузке: " + e.getMessage());
-            return "redirect:/artwork/create";
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            redirectAttributes.addFlashAttribute("error", "Операция прервана");
             return "redirect:/artwork/create";
         }
     }

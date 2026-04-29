@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Collection;
 
 @Service
 @Transactional
@@ -54,5 +55,18 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     public void markAllAsRead(User user) {
         notificationRepository.markAllAsReadByUser(user);
+    }
+
+    @Override
+    public boolean deleteForUser(User user, Long notificationId) {
+        return notificationRepository.deleteByIdAndUser(notificationId, user) > 0;
+    }
+
+    @Override
+    public long deleteForUser(User user, Collection<Long> notificationIds) {
+        if (notificationIds == null || notificationIds.isEmpty()) {
+            return 0;
+        }
+        return notificationRepository.deleteByUserAndIdIn(user, notificationIds);
     }
 }

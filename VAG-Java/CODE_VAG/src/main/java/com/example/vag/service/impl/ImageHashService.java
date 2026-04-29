@@ -1,5 +1,6 @@
 package com.example.vag.service.impl;
 
+import com.example.vag.dto.SimilarArtworkInfo;
 import com.example.vag.model.Artwork;
 import com.example.vag.model.ImageHash;
 import com.example.vag.repository.ImageHashRepository;
@@ -10,6 +11,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class ImageHashService {
@@ -92,5 +94,49 @@ public class ImageHashService {
     public void deleteByArtworkId(Long artworkId) {
         imageHashRepository.findByArtworkId(artworkId)
                 .ifPresent(imageHashRepository::delete);
+    }
+
+    /**
+     * Находит информацию о дубликате по MD5.
+     * @return информация о дубликате или null
+     */
+    public SimilarArtworkInfo findDuplicateByMd5(MultipartFile file) throws IOException {
+        String md5 = HashUtils.computeMD5(file);
+        Optional<ImageHash> existing = imageHashRepository.findByMd5(md5);
+
+        if (existing.isPresent()) {
+            Artwork duplicate = existing.get().getArtwork();
+            return new SimilarArtworkInfo(
+                    duplicate.getId(),
+                    duplicate.getTitle(),
+                    0  // расстояние 0 = точное совпадение
+            );
+        }
+        return null;
+    }
+
+    /**
+     * Находит визуально похожую работу по pHash.
+     * @return информация о похожей работе или null
+     */
+    public SimilarArtworkInfo findSimilarArtwork(MultipartFile file, Long excludeArtworkId) throws IOException {
+        String newHash = HashUtils.computePHash(file);
+        if (newHash == null) return null;
+
+        List<ImageHash> existingHashes = imageHashRepository.findAllActiveHashesExcluding(excludeArtworkId);
+
+        for (ImageHash existing : existingHashes) {
+            if (existing.getPHash() != null) {
+                int distance = HashUtils.hammingDistance(newHash, existing.getPHash());
+                if (distance <= 10) {
+                    return new SimilarArtworkInfo(
+                            existing.getArtwork().getId(),
+                            existing.getArtwork().getTitle(),
+                            distance
+                    );
+                }
+            }
+        }
+        return null;
     }
 }
