@@ -6,8 +6,6 @@ import com.example.vag.model.*;
 import com.example.vag.service.*;
 import com.example.vag.service.impl.ImageHashService;
 import com.example.vag.util.FileUploadUtil;
-import com.example.vag.util.HashUtils;
-import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -25,7 +23,6 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import javax.validation.Valid;
 import java.io.IOException;
 import java.util.*;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 @Controller
@@ -246,6 +243,41 @@ public class ArtworkController {
                              RedirectAttributes redirectAttributes) {
         User user = userService.getCurrentUser();
         artworkService.addComment(id, user, content);
+        return "redirect:/artwork/details/" + id;
+    }
+
+    @PostMapping("/report/{id}")
+    public String reportArtwork(@PathVariable Long id,
+                                @RequestParam(value = "reason", required = false) String reason,
+                                RedirectAttributes redirectAttributes) {
+        User currentUser = userService.getCurrentUser();
+        if (currentUser == null) {
+            return "redirect:/auth/login";
+        }
+
+        Artwork artwork = artworkService.findById(id).orElseThrow();
+        if (artwork.getUser() != null && artwork.getUser().getId().equals(currentUser.getId())) {
+            redirectAttributes.addFlashAttribute("warning", "Нельзя пожаловаться на собственную публикацию.");
+            return "redirect:/artwork/details/" + id;
+        }
+
+        artworkService.reportArtwork(id, currentUser, reason);
+
+        String reasonText = (reason == null || reason.trim().isEmpty()) ? "Без комментария" : reason.trim();
+        List<User> admins = userService.findAll().stream()
+                .filter(user -> user.hasRole("ADMIN"))
+                .collect(Collectors.toList());
+
+        for (User admin : admins) {
+            notificationService.create(
+                    admin,
+                    "Поступила жалоба на публикацию \"" + artwork.getTitle() + "\" от пользователя " +
+                            currentUser.getUsername() + ". Причина: " + reasonText,
+                    "/artwork/details/" + artwork.getId()
+            );
+        }
+
+        redirectAttributes.addFlashAttribute("message", "Жалоба отправлена администратору.");
         return "redirect:/artwork/details/" + id;
     }
 

@@ -15,8 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 import com.example.vag.dto.ModerationResult;
-import com.example.vag.service.ModerationService;
-import com.example.vag.service.impl.ImageHashService;
 
 import javax.persistence.EntityNotFoundException;
 import java.io.IOException;
@@ -313,6 +311,20 @@ public class ArtworkServiceImpl implements ArtworkService {
         commentRepository.save(comment);
         notifyArtworkAuthorAboutComment(artwork, user, content);
         recommendationService.clearModelCache();
+    }
+
+    @Override
+    public void reportArtwork(Long artworkId, User reporter, String reason) {
+        Artwork artwork = artworkRepository.findById(artworkId)
+                .orElseThrow(() -> new EntityNotFoundException("Artwork not found"));
+
+        artwork.setComplaintCount(artwork.getComplaintCount() + 1);
+
+        if (reason != null && !reason.trim().isEmpty()) {
+            artwork.setLastComplaintReason(reason.trim());
+        }
+
+        artworkRepository.save(artwork);
     }
 
     @Override

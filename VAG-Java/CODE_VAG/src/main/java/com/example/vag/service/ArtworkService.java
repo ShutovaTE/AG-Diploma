@@ -27,6 +27,7 @@ public interface ArtworkService {
     void unlikeArtwork(Long artworkId, User user);
     boolean isLikedByUser(Artwork artwork, User user);
     void addComment(Long artworkId, User user, String content);
+    void reportArtwork(Long artworkId, User reporter, String reason);
     public Artwork findByIdWithComments(Long id);
     long countApprovedArtworksByCategoryId(Long categoryId);
     Page<Artwork> getApprovedArtworks(Pageable pageable);

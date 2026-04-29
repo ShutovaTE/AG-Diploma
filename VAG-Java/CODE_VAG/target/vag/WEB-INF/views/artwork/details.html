@@ -10,6 +10,9 @@
 <div th:replace="fragments/header :: header"></div>
 
 <div class="container artwork-details">
+    <div th:if="${message}" class="alert alert-success" th:text="${message}"></div>
+    <div th:if="${warning}" class="alert alert-warning" th:text="${warning}"></div>
+
     <!-- Изображение на весь экран вверху -->
     <div class="artwork-image">
         <img th:src="@{/uploads/{path}(path=${artwork.imagePath})}" id="artwork-img" onclick="openFullscreen(this)"/>
@@ -48,12 +51,27 @@
                     </span>
                 </p>
                 <p th:text="${artwork.likes} + ' лайков'"></p>
+                <div th:if="${isAdmin and artwork.complaintCount > 0}" class="alert alert-danger" style="margin: 10px 0;">
+                    На публикацию пожаловались: <strong th:text="${artwork.complaintCount}"></strong>
+                    <div th:if="${artwork.lastComplaintReason != null && !artwork.lastComplaintReason.isEmpty()}"
+                         style="margin-top: 6px;">
+                        Последняя причина: <span th:text="${artwork.lastComplaintReason}"></span>
+                    </div>
+                </div>
                 <div th:if="${isAuthenticated and artwork.status == 'APPROVED'}">
                     <form th:action="@{/artwork/like/{id}(id=${artwork.id})}" method="post" th:if="${!isLiked}">
                         <button type="submit" class="btn btn-like">Нравится</button>
                     </form>
                     <form th:action="@{/artwork/unlike/{id}(id=${artwork.id})}" method="post" th:unless="${!isLiked}">
                         <button type="submit" class="btn btn-unlike">Не нравится</button>
+                    </form>
+                    <form th:if="${!isAuthor and !isAdmin}"
+                          th:action="@{/artwork/report/{id}(id=${artwork.id})}"
+                          method="post"
+                          style="margin-top: 10px;">
+                        <textarea name="reason" placeholder="Причина жалобы (необязательно)" rows="2"
+                                  style="width: 100%; max-width: 360px; margin-bottom: 8px;"></textarea>
+                        <button type="submit" class="btn btn-danger">Пожаловаться</button>
                     </form>
                 </div>                    
             </div>

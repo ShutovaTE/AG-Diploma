@@ -84,6 +84,12 @@ public class Artwork {
     @Column
     private String similarArtworkTitle;
 
+    @Column(nullable = false)
+    private int complaintCount = 0;
+
+    @Column(columnDefinition = "TEXT")
+    private String lastComplaintReason;
+
     @OneToMany(mappedBy = "artwork", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Like> artworkLikes;
 

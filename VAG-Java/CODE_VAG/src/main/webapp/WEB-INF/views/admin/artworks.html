@@ -90,6 +90,10 @@
             color: #991b1b;
             background: #fee2e2;
         }
+        .status-complaint {
+            color: #7c2d12;
+            background: #ffedd5;
+        }
         .card-section {
             border-radius: 8px;
             padding: 10px 12px;
@@ -246,6 +250,9 @@
                     <span th:case="'APPROVED'" class="status-badge status-approved">Одобрена</span>
                     <span th:case="'REJECTED'" class="status-badge status-rejected">Отклонена</span>
                     <span th:case="*" class="status-badge">[[${artwork.status}]]</span>
+                </span>
+                <span th:if="${artwork.complaintCount > 0}" class="status-badge status-complaint">
+                    Жалобы: [[${artwork.complaintCount}]]
                 </span>
 
                 <details class="moderation-details"
