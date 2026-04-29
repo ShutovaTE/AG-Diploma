@@ -27,6 +27,10 @@ import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/artwork")
+/**
+ * Контроллер публикаций: создание, просмотр, редактирование,
+ * модерация и пользовательские действия (лайки, комментарии, жалобы).
+ */
 public class ArtworkController {
 
     private final ArtworkService artworkService;
@@ -403,7 +407,7 @@ public class ArtworkController {
         try {
             MultipartFile imageFile = fileUploadUtil.getAsMultipartFile(imagePath, safeFileName);
 
-            // AI-модерация
+            // ИИ-модерация
             ModerationResult moderationResult = moderationService.moderateImage(imageFile, null);
 
             List<Category> categories = categoryService.findAllByIds(categoryIds);
@@ -414,7 +418,7 @@ public class ArtworkController {
             artwork.setLikes(0);
             artwork.setViews(0);
 
-            // СОХРАНЯЕМ AI-ОТЧЁТ
+            // Сохраняем отчёт ИИ
             artwork.setAiReport(moderationResult.getAiReport());
 
             if (!moderationResult.isApproved()) {

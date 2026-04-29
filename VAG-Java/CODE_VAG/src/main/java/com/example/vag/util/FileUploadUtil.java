@@ -15,6 +15,10 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 @Component
+/**
+ * Утилита для работы с MinIO: загрузка, удаление, чтение
+ * и генерация временных ссылок на файлы.
+ */
 public class FileUploadUtil {
     private final MinioClient minioClient;
     private final MinioProperties minioProperties;
@@ -137,7 +141,7 @@ public class FileUploadUtil {
     }
 
     /**
-     * Получает файл из MinIO как MultipartFile (для AI-модерации).
+     * Получает файл из MinIO как MultipartFile (для ИИ-модерации).
      */
     public MultipartFile getAsMultipartFile(String objectKey, String fileName) throws IOException {
         try {

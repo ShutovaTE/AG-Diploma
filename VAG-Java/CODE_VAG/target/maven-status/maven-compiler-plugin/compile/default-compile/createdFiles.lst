@@ -1,3 +1,4 @@
+com\example\vag\util\UploadsInitializer.class
 com\example\vag\service\impl\ImageHashService.class
 com\example\vag\model\Category.class
 com\example\vag\service\impl\UserServiceImpl.class

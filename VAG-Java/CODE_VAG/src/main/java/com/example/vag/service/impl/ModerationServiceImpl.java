@@ -7,6 +7,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
+/**
+ * Выполняет проверку изображений по нескольким источникам
+ * и формирует итоговый отчёт модерации.
+ */
 public class ModerationServiceImpl implements ModerationService {
 
     private final YandexVisionService visionService;
@@ -27,7 +31,7 @@ public class ModerationServiceImpl implements ModerationService {
         result.setApproved(true);
 
         StringBuilder report = new StringBuilder();
-        report.append("ОТЧЁТ AI-МОДЕРАЦИИ\n");
+        report.append("ОТЧЁТ ИИ-МОДЕРАЦИИ\n");
         report.append("Файл: ").append(file.getOriginalFilename()).append("\n");
         report.append("Размер: ").append(file.getSize()).append(" байт\n\n");
 

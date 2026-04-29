@@ -27,6 +27,10 @@ import java.util.stream.Collectors;
 
 @Service
 @Transactional
+/**
+ * Основная бизнес-логика работы с публикациями:
+ * сохранение, модерация, реакции пользователей и уведомления.
+ */
 public class ArtworkServiceImpl implements ArtworkService {
 
     private final ArtworkRepository artworkRepository;
@@ -90,7 +94,7 @@ public class ArtworkServiceImpl implements ArtworkService {
         artwork.setLikes(0);
         artwork.setViews(0);
 
-        // Сохраняем AI-отчёт
+        // Сохраняем отчёт ИИ
         artwork.setAiReport(moderationResult.getAiReport());
 
         // Сохраняем ID похожей работы

@@ -289,7 +289,7 @@
                     <button th:if="${artwork.aiReport != null}"
                             class="ai-report-btn"
                             th:attr="onclick='showReport(\'' + ${artwork.id} + '\')'">
-                        Отчёт AI
+                        Отчёт ИИ
                     </button>
                 </div>
             </div>
@@ -305,7 +305,7 @@
 <!-- Модальное окно -->
 <div id="reportModal" class="report-modal">
     <div style="display: flex; justify-content: space-between; align-items: center;">
-        <h3>Отчёт AI-модерации</h3>
+        <h3>Отчёт ИИ-модерации</h3>
         <button onclick="closeReport()" style="background: none; border: none; font-size: 24px; cursor: pointer;">✕</button>
     </div>
     <div id="reportContent" class="report-content">

@@ -24,14 +24,16 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/admin")
+/**
+ * Управляет административными сценариями: модерацией публикаций,
+ * категориями и служебными действиями для администраторов.
+ */
 public class AdminController {
 
     private final UserService userService;
@@ -110,7 +112,7 @@ public class AdminController {
             // Повторная модерация
             ModerationResult result = moderationService.moderateImage(multipartFile, artwork.getId());
 
-            // Сохраняем AI-отчёт в artwork
+            // Сохраняем отчёт ИИ в публикацию
             artwork.setAiReport(result.getAiReport());
             artworkService.save(artwork);
 
@@ -259,7 +261,7 @@ public class AdminController {
             return "admin/edit-category";
         }
         categoryService.update(id, category);
-        redirectAttributes.addFlashAttribute("success", "Category updated");
+        redirectAttributes.addFlashAttribute("success", "Категория обновлена");
         return "redirect:/admin/categories";
     }
 
