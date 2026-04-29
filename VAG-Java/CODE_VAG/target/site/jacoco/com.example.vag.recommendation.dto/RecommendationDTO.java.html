@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ru"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RecommendationDTO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">vag</a> &gt; <a href="index.source.html" class="el_package">com.example.vag.recommendation.dto</a> &gt; <span class="el_source">RecommendationDTO.java</span></div><h1>RecommendationDTO.java</h1><pre class="source lang-java linenums">package com.example.vag.recommendation.dto;
+
+/**
+ * DTO для передачи данных о рекомендованных работах.
+ * 
+ * Этот класс предназначен для сериализации в JSON при вызове
+ * Python-скрипта рекомендаций и передачи в frontend.
+ */
+public class RecommendationDTO {
+    
+    private Long artworkId;
+    private String title;
+    private String author;
+    private String categories;
+    private Integer likes;
+    private Double score;
+    
+<span class="nc" id="L18">    public RecommendationDTO() {</span>
+<span class="nc" id="L19">    }</span>
+    
+    public RecommendationDTO(Long artworkId, String title, String author, 
+<span class="nc" id="L22">                             String categories, Integer likes, Double score) {</span>
+<span class="nc" id="L23">        this.artworkId = artworkId;</span>
+<span class="nc" id="L24">        this.title = title;</span>
+<span class="nc" id="L25">        this.author = author;</span>
+<span class="nc" id="L26">        this.categories = categories;</span>
+<span class="nc" id="L27">        this.likes = likes;</span>
+<span class="nc" id="L28">        this.score = score;</span>
+<span class="nc" id="L29">    }</span>
+    
+    public Long getArtworkId() {
+<span class="nc" id="L32">        return artworkId;</span>
+    }
+    
+    public void setArtworkId(Long artworkId) {
+<span class="nc" id="L36">        this.artworkId = artworkId;</span>
+<span class="nc" id="L37">    }</span>
+    
+    public String getTitle() {
+<span class="nc" id="L40">        return title;</span>
+    }
+    
+    public void setTitle(String title) {
+<span class="nc" id="L44">        this.title = title;</span>
+<span class="nc" id="L45">    }</span>
+    
+    public String getAuthor() {
+<span class="nc" id="L48">        return author;</span>
+    }
+    
+    public void setAuthor(String author) {
+<span class="nc" id="L52">        this.author = author;</span>
+<span class="nc" id="L53">    }</span>
+    
+    public String getCategories() {
+<span class="nc" id="L56">        return categories;</span>
+    }
+    
+    public void setCategories(String categories) {
+<span class="nc" id="L60">        this.categories = categories;</span>
+<span class="nc" id="L61">    }</span>
+    
+    public Integer getLikes() {
+<span class="nc" id="L64">        return likes;</span>
+    }
+    
+    public void setLikes(Integer likes) {
+<span class="nc" id="L68">        this.likes = likes;</span>
+<span class="nc" id="L69">    }</span>
+    
+    public Double getScore() {
+<span class="nc" id="L72">        return score;</span>
+    }
+    
+    public void setScore(Double score) {
+<span class="nc" id="L76">        this.score = score;</span>
+<span class="nc" id="L77">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ru"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Notification.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">vag</a> &gt; <a href="index.source.html" class="el_package">com.example.vag.model</a> &gt; <span class="el_source">Notification.java</span></div><h1>Notification.java</h1><pre class="source lang-java linenums">package com.example.vag.model;
+
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import javax.persistence.*;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = &quot;notifications&quot;)
+@Getter
+<span class="nc" id="L13">@Setter</span>
+<span class="nc" id="L14">@NoArgsConstructor</span>
+public class Notification {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+<span class="nc" id="L19">    private Long id;</span>
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = &quot;user_id&quot;, nullable = false)
+<span class="nc" id="L23">    private User user;</span>
+
+    @Column(nullable = false, columnDefinition = &quot;TEXT&quot;)
+<span class="nc" id="L26">    private String message;</span>
+
+    @Column(name = &quot;target_link&quot;, length = 512)
+<span class="nc" id="L29">    private String targetLink;</span>
+
+    @Column(name = &quot;is_read&quot;, nullable = false)
+<span class="nc" id="L32">    private boolean read;</span>
+
+    @Column(name = &quot;createdAt&quot;, nullable = false)
+<span class="nc" id="L35">    private LocalDateTime createdAt;</span>
+
+    @Column(name = &quot;created_at&quot;, nullable = false)
+<span class="nc" id="L38">    private LocalDateTime createdAtLegacy;</span>
+
+    @PrePersist
+    protected void onCreate() {
+<span class="nc" id="L42">        LocalDateTime now = LocalDateTime.now();</span>
+<span class="nc" id="L43">        this.createdAt = now;</span>
+<span class="nc" id="L44">        this.createdAtLegacy = now;</span>
+<span class="nc" id="L45">        this.read = false;</span>
+<span class="nc" id="L46">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ru"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UploadController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">vag</a> &gt; <a href="index.source.html" class="el_package">com.example.vag.controller</a> &gt; <span class="el_source">UploadController.java</span></div><h1>UploadController.java</h1><pre class="source lang-java linenums">package com.example.vag.controller;
+
+import com.example.vag.util.FileUploadUtil;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+
+import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URLConnection;
+
+@Controller
+public class UploadController {
+
+    private final FileUploadUtil fileUploadUtil;
+
+<span class="nc" id="L19">    public UploadController(FileUploadUtil fileUploadUtil) {</span>
+<span class="nc" id="L20">        this.fileUploadUtil = fileUploadUtil;</span>
+<span class="nc" id="L21">    }</span>
+
+    @GetMapping(&quot;/uploads/**&quot;)
+    public ResponseEntity&lt;byte[]&gt; getUpload(HttpServletRequest request) throws IOException {
+<span class="nc" id="L25">        String requestUri = request.getRequestURI();</span>
+<span class="nc" id="L26">        String contextPath = request.getContextPath();</span>
+<span class="nc" id="L27">        String path = requestUri.substring(contextPath.length());</span>
+<span class="nc" id="L28">        String objectKey = path.replaceFirst(&quot;^/uploads/&quot;, &quot;&quot;);</span>
+
+<span class="nc" id="L30">        try (InputStream inputStream = fileUploadUtil.getFile(objectKey)) {</span>
+<span class="nc" id="L31">            byte[] bytes = inputStream.readAllBytes();</span>
+<span class="nc" id="L32">            String contentType = URLConnection.guessContentTypeFromName(objectKey);</span>
+<span class="nc bnc" id="L33" title="All 2 branches missed.">            if (contentType == null) {</span>
+<span class="nc" id="L34">                contentType = MediaType.APPLICATION_OCTET_STREAM_VALUE;</span>
+            }
+<span class="nc" id="L36">            return ResponseEntity.ok()</span>
+<span class="nc" id="L37">                    .contentType(MediaType.parseMediaType(contentType))</span>
+<span class="nc" id="L38">                    .body(bytes);</span>
+<span class="nc" id="L39">        } catch (IOException e) {</span>
+<span class="nc" id="L40">            return ResponseEntity.notFound().build();</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

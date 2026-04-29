@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ru"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">vag</a> &gt; <a href="index.source.html" class="el_package">com.example.vag.service.impl</a> &gt; <span class="el_source">UserServiceImpl.java</span></div><h1>UserServiceImpl.java</h1><pre class="source lang-java linenums">package com.example.vag.service.impl;
+
+import com.example.vag.model.Role;
+import com.example.vag.model.User;
+import com.example.vag.repository.RoleRepository;
+import com.example.vag.repository.UserRepository;
+import com.example.vag.service.UserService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Optional;
+
+@Service
+@Transactional
+public class UserServiceImpl implements UserService {
+
+    private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    public UserServiceImpl(UserRepository userRepository,
+                           RoleRepository roleRepository,
+<span class="nc" id="L30">                           PasswordEncoder passwordEncoder) {</span>
+<span class="nc" id="L31">        this.userRepository = userRepository;</span>
+<span class="nc" id="L32">        this.roleRepository = roleRepository;</span>
+<span class="nc" id="L33">        this.passwordEncoder = passwordEncoder;</span>
+<span class="nc" id="L34">    }</span>
+
+    @Override
+    public User save(User user) {
+<span class="nc" id="L38">        return userRepository.save(user);</span>
+    }
+
+    @Override
+    public User register(User user) {
+<span class="nc" id="L43">        Role userRole = roleRepository.findByName(Role.RoleName.ARTIST)</span>
+<span class="nc" id="L44">                .orElseThrow(() -&gt; new IllegalStateException(&quot;Artist role not found&quot;));</span>
+
+<span class="nc" id="L46">        user.setRole(userRole);</span>
+<span class="nc" id="L47">        user.setPassword(passwordEncoder.encode(user.getPassword()));</span>
+<span class="nc" id="L48">        return userRepository.save(user);</span>
+    }
+
+    @Override
+    public List&lt;User&gt; findAll() {
+<span class="nc" id="L53">        return userRepository.findAll();</span>
+    }
+
+    @Override
+    public Page&lt;User&gt; findAll(Pageable pageable) {
+<span class="nc" id="L58">        return userRepository.findAll(pageable);</span>
+    }
+
+    @Override
+    public Optional&lt;User&gt; findById(Long id) {
+<span class="nc" id="L63">        return userRepository.findById(id);</span>
+    }
+
+    @Override
+    public Optional&lt;User&gt; findByUsername(String username) {
+<span class="nc" id="L68">        return userRepository.findByUsername(username);</span>
+    }
+
+    @Override
+    public Optional&lt;User&gt; findByEmail(String email) {
+<span class="nc" id="L73">        return userRepository.findByEmail(email);</span>
+    }
+
+    @Override
+    public void delete(User user) {
+<span class="nc" id="L78">        userRepository.delete(user);</span>
+<span class="nc" id="L79">    }</span>
+
+    @Override
+    public User update(User updatedUser) {
+<span class="nc" id="L83">        User user = userRepository.findById(updatedUser.getId())</span>
+<span class="nc" id="L84">                .orElseThrow(() -&gt; new IllegalArgumentException(&quot;User not found&quot;));</span>
+
+<span class="nc bnc" id="L86" title="All 2 branches missed.">        if (updatedUser.getUsername() != null) {</span>
+<span class="nc" id="L87">            user.setUsername(updatedUser.getUsername());</span>
+        }
+
+<span class="nc bnc" id="L90" title="All 2 branches missed.">        if (updatedUser.getEmail() != null) {</span>
+<span class="nc" id="L91">            user.setEmail(updatedUser.getEmail());</span>
+        }
+
+<span class="nc bnc" id="L94" title="All 4 branches missed.">        if (updatedUser.getPassword() != null &amp;&amp; !updatedUser.getPassword().isEmpty()) {</span>
+<span class="nc" id="L95">            user.setPassword(passwordEncoder.encode(updatedUser.getPassword()));</span>
+        }
+
+<span class="nc" id="L98">        return userRepository.save(user);</span>
+    }
+
+    @Override
+    public User getCurrentUser() {
+<span class="nc" id="L103">        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();</span>
+<span class="nc bnc" id="L104" title="All 4 branches missed.">        if (authentication == null || !authentication.isAuthenticated()) {</span>
+<span class="nc" id="L105">            return null;</span>
+        }
+
+<span class="nc" id="L108">        return userRepository.findByUsername(authentication.getName())</span>
+<span class="nc" id="L109">                .orElseThrow(() -&gt; new UsernameNotFoundException(&quot;User not found&quot;));</span>
+    }
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

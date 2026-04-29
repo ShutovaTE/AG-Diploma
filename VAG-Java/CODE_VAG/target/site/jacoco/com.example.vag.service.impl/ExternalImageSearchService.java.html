@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ru"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ExternalImageSearchService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">vag</a> &gt; <a href="index.source.html" class="el_package">com.example.vag.service.impl</a> &gt; <span class="el_source">ExternalImageSearchService.java</span></div><h1>ExternalImageSearchService.java</h1><pre class="source lang-java linenums">package com.example.vag.service.impl;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+
+@Service
+<span class="nc" id="L19">public class ExternalImageSearchService {</span>
+
+    @Value(&quot;${serpapi.api.key:}&quot;)
+    private String serpApiKey;
+
+<span class="nc" id="L24">    private final OkHttpClient httpClient = new OkHttpClient();</span>
+<span class="nc" id="L25">    private final ObjectMapper objectMapper = new ObjectMapper();</span>
+
+    public int findSimilarImagesCount(MultipartFile file) throws IOException {
+<span class="nc bnc" id="L28" title="All 4 branches missed.">        if (serpApiKey == null || serpApiKey.isEmpty()) return 0;</span>
+
+        String base64Image;
+<span class="nc" id="L31">        try (InputStream is = file.getInputStream()) {</span>
+<span class="nc" id="L32">            byte[] bytes = is.readAllBytes();</span>
+<span class="nc" id="L33">            base64Image = Base64.getEncoder().encodeToString(bytes);</span>
+        }
+
+<span class="nc" id="L36">        String imageUrl = &quot;data:image/jpeg;base64,&quot; + base64Image;</span>
+<span class="nc" id="L37">        String encodedImageUrl = URLEncoder.encode(imageUrl, StandardCharsets.UTF_8);</span>
+
+<span class="nc" id="L39">        String url = &quot;https://serpapi.com/search?engine=google_reverse_image&amp;image_url=&quot;</span>
+                + encodedImageUrl + &quot;&amp;api_key=&quot; + serpApiKey;
+
+<span class="nc" id="L42">        Request request = new Request.Builder().url(url).build();</span>
+<span class="nc" id="L43">        try (Response response = httpClient.newCall(request).execute()) {</span>
+<span class="nc bnc" id="L44" title="All 2 branches missed.">            if (!response.isSuccessful()) return 0;</span>
+<span class="nc" id="L45">            String body = response.body().string();</span>
+<span class="nc" id="L46">            JsonNode root = objectMapper.readTree(body);</span>
+<span class="nc" id="L47">            JsonNode inlineImages = root.path(&quot;inline_images&quot;);</span>
+<span class="nc bnc" id="L48" title="All 2 branches missed.">            return inlineImages.isArray() ? inlineImages.size() : 0;</span>
+<span class="nc bnc" id="L49" title="All 2 branches missed.">        }</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

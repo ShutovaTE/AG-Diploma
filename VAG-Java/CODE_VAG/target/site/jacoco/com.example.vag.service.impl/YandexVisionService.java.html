@@ -1,0 +1,232 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ru"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>YandexVisionService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">vag</a> &gt; <a href="index.source.html" class="el_package">com.example.vag.service.impl</a> &gt; <span class="el_source">YandexVisionService.java</span></div><h1>YandexVisionService.java</h1><pre class="source lang-java linenums">package com.example.vag.service.impl;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import okhttp3.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import javax.imageio.ImageIO;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+@Service
+<span class="fc" id="L23">public class YandexVisionService {</span>
+<span class="fc" id="L24">    private static final Logger log = LoggerFactory.getLogger(YandexVisionService.class);</span>
+    private static final String VISION_URL = &quot;https://vision.api.cloud.yandex.net/vision/v1/batchAnalyze&quot;;
+    private static final int MAX_RETRIES = 3;
+    private static final long RETRY_BASE_DELAY_MS = 300L;
+    private static final double ADULT_CONFIDENCE_THRESHOLD = 0.7;
+    private static final double VIOLENCE_CONFIDENCE_THRESHOLD = 0.85;
+
+    @Value(&quot;${YANDEX_API_KEY:${yandex.api.key:}}&quot;)
+    private String apiKey;
+
+    @Value(&quot;${YANDEX_FOLDER_ID:${yandex.folder.id:}}&quot;)
+    private String folderId;
+
+<span class="fc" id="L37">    private OkHttpClient httpClient = new OkHttpClient.Builder()</span>
+<span class="fc" id="L38">            .connectTimeout(5, TimeUnit.SECONDS)</span>
+<span class="fc" id="L39">            .readTimeout(10, TimeUnit.SECONDS)</span>
+<span class="fc" id="L40">            .writeTimeout(10, TimeUnit.SECONDS)</span>
+<span class="fc" id="L41">            .callTimeout(15, TimeUnit.SECONDS)</span>
+<span class="fc" id="L42">            .build();</span>
+<span class="fc" id="L43">    private ObjectMapper objectMapper = new ObjectMapper();</span>
+<span class="fc" id="L44">    private String visionUrl = VISION_URL;</span>
+
+    /**
+     * Проверяет изображение на наличие контента 18+ через Yandex Vision.
+     */
+    public boolean hasExplicitContent(MultipartFile file) throws IOException {
+<span class="pc bpc" id="L50" title="1 of 2 branches missed.">        if (!isConfigured()) {</span>
+<span class="nc" id="L51">            log.warn(&quot;Yandex Vision не настроен. Проверка пропущена.&quot;);</span>
+<span class="nc" id="L52">            return false;</span>
+        }
+
+        try {
+<span class="fc" id="L56">            String base64Image = encodeFileToBase64(file);</span>
+<span class="fc" id="L57">            String requestBody = String.format(</span>
+                    &quot;{\&quot;folderId\&quot;:\&quot;%s\&quot;,\&quot;analyze_specs\&quot;:[{\&quot;content\&quot;:\&quot;%s\&quot;,\&quot;features\&quot;:[{\&quot;type\&quot;:\&quot;CLASSIFICATION\&quot;,\&quot;classificationConfig\&quot;:{\&quot;model\&quot;:\&quot;moderation\&quot;}}]}]}&quot;,
+                    folderId, base64Image
+            );
+
+<span class="fc" id="L62">            JsonNode root = executeVisionRequestWithRetry(requestBody);</span>
+<span class="fc bfc" id="L63" title="All 2 branches covered.">            if (root == null) {</span>
+<span class="fc" id="L64">                return false;</span>
+            }
+<span class="fc" id="L66">            return containsExplicitFromModeration(root);</span>
+<span class="nc" id="L67">        } catch (Exception e) {</span>
+<span class="nc" id="L68">            log.error(&quot;Ошибка при проверке Yandex Vision&quot;, e);</span>
+        }
+<span class="nc" id="L70">        return false;</span>
+    }
+
+    /**
+     * Определяет категории изображения.
+     */
+    public List&lt;String&gt; detectCategories(MultipartFile file) throws IOException {
+<span class="nc" id="L77">        List&lt;String&gt; categories = new ArrayList&lt;&gt;();</span>
+
+<span class="nc bnc" id="L79" title="All 2 branches missed.">        if (!isConfigured()) {</span>
+<span class="nc" id="L80">            return categories;</span>
+        }
+
+        try {
+<span class="nc" id="L84">            String base64Image = encodeFileToBase64(file);</span>
+<span class="nc" id="L85">            String requestBody = String.format(</span>
+                    &quot;{\&quot;folderId\&quot;:\&quot;%s\&quot;,\&quot;analyze_specs\&quot;:[{\&quot;content\&quot;:\&quot;%s\&quot;,\&quot;features\&quot;:[{\&quot;type\&quot;:\&quot;LABEL_DETECTION\&quot;,\&quot;maxResults\&quot;:10}]}]}&quot;,
+                    folderId, base64Image
+            );
+<span class="nc" id="L89">            JsonNode root = executeVisionRequestWithRetry(requestBody);</span>
+<span class="nc bnc" id="L90" title="All 2 branches missed.">            if (root == null) {</span>
+<span class="nc" id="L91">                return categories;</span>
+            }
+<span class="nc" id="L93">            JsonNode results = root.path(&quot;results&quot;);</span>
+<span class="nc bnc" id="L94" title="All 4 branches missed.">            if (results.isArray() &amp;&amp; results.size() &gt; 0) {</span>
+<span class="nc" id="L95">                JsonNode labels = results.get(0).path(&quot;results&quot;).get(0).path(&quot;labelAnnotations&quot;);</span>
+<span class="nc bnc" id="L96" title="All 2 branches missed.">                for (JsonNode label : labels) {</span>
+<span class="nc bnc" id="L97" title="All 2 branches missed.">                    if (label.path(&quot;confidence&quot;).asDouble() &gt; 0.5) {</span>
+<span class="nc" id="L98">                        categories.add(label.path(&quot;description&quot;).asText());</span>
+                    }
+<span class="nc" id="L100">                }</span>
+            }
+<span class="nc" id="L102">        } catch (Exception e) {</span>
+<span class="nc" id="L103">            log.error(&quot;Ошибка при определении категорий через Yandex Vision&quot;, e);</span>
+<span class="nc" id="L104">        }</span>
+<span class="nc" id="L105">        return categories;</span>
+    }
+
+    private boolean isConfigured() {
+<span class="pc bpc" id="L109" title="4 of 8 branches missed.">        return apiKey != null &amp;&amp; !apiKey.isBlank() &amp;&amp; folderId != null &amp;&amp; !folderId.isBlank();</span>
+    }
+
+    private JsonNode executeVisionRequestWithRetry(String rawJsonBody) throws IOException {
+<span class="fc" id="L113">        IOException lastIoException = null;</span>
+<span class="pc bpc" id="L114" title="1 of 2 branches missed.">        for (int attempt = 1; attempt &lt;= MAX_RETRIES; attempt++) {</span>
+<span class="fc" id="L115">            Request request = new Request.Builder()</span>
+<span class="fc" id="L116">                    .url(visionUrl)</span>
+<span class="fc" id="L117">                    .post(RequestBody.create(rawJsonBody, MediaType.parse(&quot;application/json&quot;)))</span>
+<span class="fc" id="L118">                    .addHeader(&quot;Authorization&quot;, &quot;Api-Key &quot; + apiKey)</span>
+<span class="fc" id="L119">                    .build();</span>
+
+<span class="fc" id="L121">            try (Response response = httpClient.newCall(request).execute()) {</span>
+<span class="fc bfc" id="L122" title="All 2 branches covered.">                if (response.isSuccessful()) {</span>
+<span class="fc" id="L123">                    ResponseBody body = response.body();</span>
+<span class="pc bpc" id="L124" title="1 of 2 branches missed.">                    if (body == null) {</span>
+<span class="nc" id="L125">                        log.warn(&quot;Yandex Vision вернул пустой ответ (attempt={})&quot;, attempt);</span>
+<span class="nc" id="L126">                        return null;</span>
+                    }
+<span class="fc" id="L128">                    return objectMapper.readTree(body.string());</span>
+                }
+
+<span class="pc bpc" id="L131" title="1 of 2 branches missed.">                String errorBody = response.body() != null ? response.body().string() : &quot;&quot;;</span>
+<span class="pc bpc" id="L132" title="1 of 4 branches missed.">                boolean shouldRetry = response.code() &gt;= 500 || response.code() == 429;</span>
+<span class="fc" id="L133">                log.warn(&quot;Yandex Vision HTTP {} (attempt={}): {}&quot;, response.code(), attempt, errorBody);</span>
+<span class="pc bpc" id="L134" title="1 of 4 branches missed.">                if (!shouldRetry || attempt == MAX_RETRIES) {</span>
+<span class="fc" id="L135">                    return null;</span>
+                }
+<span class="pc bpc" id="L137" title="4 of 6 branches missed.">            } catch (IOException e) {</span>
+<span class="nc" id="L138">                lastIoException = e;</span>
+<span class="nc" id="L139">                log.warn(&quot;Сетевая ошибка Yandex Vision (attempt={}): {}&quot;, attempt, e.getMessage());</span>
+<span class="nc bnc" id="L140" title="All 2 branches missed.">                if (attempt == MAX_RETRIES) {</span>
+<span class="nc" id="L141">                    break;</span>
+                }
+<span class="fc" id="L143">            }</span>
+<span class="fc" id="L144">            sleepBeforeRetry(attempt);</span>
+        }
+
+<span class="nc bnc" id="L147" title="All 2 branches missed.">        if (lastIoException != null) {</span>
+<span class="nc" id="L148">            throw lastIoException;</span>
+        }
+<span class="nc" id="L150">        return null;</span>
+    }
+
+    private void sleepBeforeRetry(int attempt) {
+        try {
+<span class="fc" id="L155">            long delay = RETRY_BASE_DELAY_MS * (1L &lt;&lt; (attempt - 1));</span>
+<span class="fc" id="L156">            Thread.sleep(delay);</span>
+<span class="nc" id="L157">        } catch (InterruptedException ie) {</span>
+<span class="nc" id="L158">            Thread.currentThread().interrupt();</span>
+<span class="nc" id="L159">            log.warn(&quot;Ожидание повтора прервано&quot;);</span>
+<span class="fc" id="L160">        }</span>
+<span class="fc" id="L161">    }</span>
+
+    private boolean containsExplicitFromModeration(JsonNode root) {
+<span class="fc" id="L164">        JsonNode results = root.path(&quot;results&quot;);</span>
+<span class="pc bpc" id="L165" title="2 of 4 branches missed.">        if (!results.isArray() || results.isEmpty()) {</span>
+<span class="nc" id="L166">            return false;</span>
+        }
+<span class="fc" id="L168">        JsonNode classification = results.get(0).path(&quot;results&quot;).get(0).path(&quot;classification&quot;);</span>
+<span class="fc" id="L169">        JsonNode properties = classification.path(&quot;properties&quot;);</span>
+<span class="pc bpc" id="L170" title="1 of 2 branches missed.">        for (JsonNode prop : properties) {</span>
+<span class="fc" id="L171">            String name = prop.path(&quot;name&quot;).asText();</span>
+<span class="fc" id="L172">            double confidence = prop.path(&quot;confidence&quot;).asDouble();</span>
+<span class="fc" id="L173">            log.debug(&quot;YandexVision: {}={}&quot;, name, confidence);</span>
+<span class="pc bpc" id="L174" title="2 of 6 branches missed.">            if ((&quot;adult&quot;.equals(name) || &quot;adult_content&quot;.equals(name))</span>
+                    &amp;&amp; confidence &gt; ADULT_CONFIDENCE_THRESHOLD) {
+<span class="fc" id="L176">                return true;</span>
+            }
+<span class="nc bnc" id="L178" title="All 4 branches missed.">            if (&quot;violence&quot;.equals(name) &amp;&amp; confidence &gt; VIOLENCE_CONFIDENCE_THRESHOLD) {</span>
+<span class="nc" id="L179">                log.info(&quot;Обнаружены сцены насилия (confidence={})&quot;, confidence);</span>
+            }
+<span class="nc" id="L181">        }</span>
+<span class="nc" id="L182">        return false;</span>
+    }
+
+    void setHttpClientForTests(OkHttpClient httpClient) {
+<span class="fc" id="L186">        this.httpClient = httpClient;</span>
+<span class="fc" id="L187">    }</span>
+
+    void setObjectMapperForTests(ObjectMapper objectMapper) {
+<span class="nc" id="L190">        this.objectMapper = objectMapper;</span>
+<span class="nc" id="L191">    }</span>
+
+    void setVisionUrlForTests(String visionUrl) {
+<span class="fc" id="L194">        this.visionUrl = visionUrl;</span>
+<span class="fc" id="L195">    }</span>
+
+    private byte[] compressImage(MultipartFile file) throws IOException {
+<span class="fc" id="L198">        BufferedImage image = ImageIO.read(file.getInputStream());</span>
+<span class="pc bpc" id="L199" title="1 of 2 branches missed.">        if (image == null) {</span>
+<span class="nc" id="L200">            throw new IOException(&quot;Не удалось прочитать изображение&quot;);</span>
+        }
+
+<span class="fc" id="L203">        int maxWidth = 1024;</span>
+<span class="fc" id="L204">        int maxHeight = 1024;</span>
+
+<span class="fc" id="L206">        int width = image.getWidth();</span>
+<span class="fc" id="L207">        int height = image.getHeight();</span>
+
+<span class="pc bpc" id="L209" title="2 of 4 branches missed.">        if (width &gt; maxWidth || height &gt; maxHeight) {</span>
+<span class="nc" id="L210">            double ratio = Math.min((double) maxWidth / width, (double) maxHeight / height);</span>
+<span class="nc" id="L211">            int newWidth = (int) (width * ratio);</span>
+<span class="nc" id="L212">            int newHeight = (int) (height * ratio);</span>
+
+<span class="nc" id="L214">            Image scaledImage = image.getScaledInstance(newWidth, newHeight, Image.SCALE_SMOOTH);</span>
+<span class="nc" id="L215">            BufferedImage newImage = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_RGB);</span>
+<span class="nc" id="L216">            Graphics2D g = newImage.createGraphics();</span>
+<span class="nc" id="L217">            g.drawImage(scaledImage, 0, 0, null);</span>
+<span class="nc" id="L218">            g.dispose();</span>
+<span class="nc" id="L219">            image = newImage;</span>
+        }
+
+<span class="fc" id="L222">        ByteArrayOutputStream baos = new ByteArrayOutputStream();</span>
+<span class="fc" id="L223">        ImageIO.write(image, &quot;jpg&quot;, baos);</span>
+<span class="fc" id="L224">        return baos.toByteArray();</span>
+    }
+
+    private String encodeFileToBase64(MultipartFile file) throws IOException {
+<span class="fc" id="L228">        byte[] compressedBytes = compressImage(file);</span>
+<span class="fc" id="L229">        return Base64.getEncoder().encodeToString(compressedBytes);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

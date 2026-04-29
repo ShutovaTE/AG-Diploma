@@ -5,6 +5,7 @@ import com.example.vag.dto.SimilarArtworkInfo;
 import com.example.vag.service.ModerationService;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.util.HtmlUtils;
 
 @Service
 /**
@@ -55,10 +56,11 @@ public class ModerationServiceImpl implements ModerationService {
             report.append("\n2. NSFW-модель ONNX (локальная):\n");
             try {
                 if (nsfwService.isAvailable()) {
-                    boolean isNsfw = nsfwService.isNSFW(file);
+                    NSFWDetectionService.NsfwAnalysisResult nsfwAnalysis = nsfwService.analyze(file);
+                    boolean isNsfw = nsfwAnalysis.isExplicit();
                     report.append("   Результат: ").append(isNsfw ? " ОБНАРУЖЕН 18+" : "OK").append("\n");
                     if (isNsfw) {
-                        String reason = nsfwService.getRejectionReason(file);
+                        String reason = nsfwService.getRejectionReason(nsfwAnalysis.getScores());
                         result.setApproved(false);
                         result.setRejectionReason(reason);
                         result.setAiReport(report.toString());
@@ -75,6 +77,7 @@ public class ModerationServiceImpl implements ModerationService {
             report.append("\n3. MD5 (точное совпадение):\n");
             SimilarArtworkInfo duplicate = imageHashService.findDuplicateByMd5(file);
             if (duplicate != null) {
+                String safeTitle = HtmlUtils.htmlEscape(duplicate.getTitle());
                 report.append("   Результат: НАЙДЕН ДУБЛИКАТ\n");
                 report.append("   Дубликат работы: \"").append(duplicate.getTitle()).append("\"\n");
                 report.append("   Ссылка на дубликат работы: /vag/artwork/details/")
@@ -90,7 +93,7 @@ public class ModerationServiceImpl implements ModerationService {
                         "Это изображение уже опубликовано. " +
                                 "<a href='/vag/artwork/details/" + duplicate.getArtworkId() + "' " +
                                 "target='_blank' style='color: #007bff; font-weight: bold; text-decoration: underline;'>" +
-                                "Посмотреть работу «" + duplicate.getTitle() + "»" +
+                                "Посмотреть работу «" + safeTitle + "»" +
                                 "</a>"
                 );
 
@@ -105,6 +108,7 @@ public class ModerationServiceImpl implements ModerationService {
             report.append("\n4. pHash (визуальное сходство):\n");
             SimilarArtworkInfo similar = imageHashService.findSimilarArtwork(file, excludeArtworkId);
             if (similar != null) {
+                String safeTitle = HtmlUtils.htmlEscape(similar.getTitle());
                 int similarityPercent = similar.getSimilarityPercent();
                 report.append("   Результат: НАЙДЕНО ПОХОЖЕЕ ИЗОБРАЖЕНИЕ\n");
 
@@ -118,7 +122,7 @@ public class ModerationServiceImpl implements ModerationService {
                         "Изображение очень похоже на существующую работу. " +
                                 "<a href='/vag/artwork/details/" + similar.getArtworkId() + "' " +
                                 "target='_blank' style='color: #007bff; font-weight: bold; text-decoration: underline;'>" +
-                                "Посмотреть работу «" + similar.getTitle() + "»" +
+                                "Посмотреть работу «" + safeTitle + "»" +
                                 "</a> (сходство: " + similarityPercent + "%)"
                 );
 

@@ -1,0 +1,4 @@
+# Yandex Vision example configuration.
+# Copy this file to api.properties for local development and set your values.
+yandex.api.key=YOUR_YANDEX_API_KEY
+yandex.folder.id=YOUR_YANDEX_FOLDER_ID

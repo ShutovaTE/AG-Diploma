@@ -1,0 +1,244 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ru"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Artwork.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">vag</a> &gt; <a href="index.source.html" class="el_package">com.example.vag.model</a> &gt; <span class="el_source">Artwork.java</span></div><h1>Artwork.java</h1><pre class="source lang-java linenums">package com.example.vag.model;
+
+import lombok.Getter;
+import lombok.Setter;
+import lombok.NoArgsConstructor;
+import lombok.EqualsAndHashCode;
+import org.springframework.web.multipart.MultipartFile;
+
+import javax.persistence.*;
+import javax.validation.constraints.NotEmpty;
+import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+@Entity
+@Table(name = &quot;artworks&quot;)
+@Getter
+<span class="nc" id="L19">@Setter</span>
+<span class="nc" id="L20">@NoArgsConstructor</span>
+<span class="nc bnc" id="L21" title="All 132 branches missed.">@EqualsAndHashCode(exclude = {&quot;exhibitions&quot;, &quot;user&quot;, &quot;artworkLikes&quot;, &quot;comments&quot;})</span>
+public class Artwork {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @NotEmpty(message = &quot;Название не может быть пустым&quot;)
+    @Column(nullable = false)
+    private String title;
+
+    @NotEmpty(message = &quot;Описание не может быть пустым&quot;)
+    @Column(columnDefinition = &quot;TEXT&quot;)
+    private String description;
+
+<span class="nc" id="L36">    @ManyToMany</span>
+    @JoinTable(
+            name = &quot;artwork_category&quot;,
+            joinColumns = @JoinColumn(name = &quot;artwork_id&quot;),
+            inverseJoinColumns = @JoinColumn(name = &quot;category_id&quot;)
+    )
+    private Set&lt;Category&gt; categories = new HashSet&lt;&gt;();
+
+    @Transient
+    private List&lt;Long&gt; categoryIds;
+
+    @Column(nullable = false)
+    private String imagePath;
+
+    @Transient
+    private MultipartFile imageFile;
+
+    @Column(nullable = false)
+    private LocalDate dateCreation;
+
+<span class="nc" id="L56">    @ManyToMany(mappedBy = &quot;artworks&quot;)</span>
+    private Set&lt;Exhibition&gt; exhibitions = new HashSet&lt;&gt;();
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = &quot;user_id&quot;, nullable = false)
+    private User user;
+
+    @Column(nullable = false)
+    private String status; // PENDING, APPROVED, REJECTED
+
+    @Column(columnDefinition = &quot;TEXT&quot;)
+    private String rejectionReason; // Причина отклонения публикации
+
+<span class="nc" id="L69">    @Column(nullable = false)</span>
+    private int likes = 0;
+
+<span class="nc" id="L72">    @Column(nullable = false)</span>
+    private int views = 0;
+
+    @Column(columnDefinition = &quot;TEXT&quot;)
+    private String aiReport;
+
+    @Column(columnDefinition = &quot;TEXT&quot;)
+<span class="nc" id="L79">    private String artistComment;</span>
+
+    @Column
+    private Long similarArtworkId;
+
+    @Column
+    private String similarArtworkTitle;
+
+<span class="nc" id="L87">    @Column(nullable = false)</span>
+<span class="nc" id="L88">    private int complaintCount = 0;</span>
+
+    @Column(columnDefinition = &quot;TEXT&quot;)
+<span class="nc" id="L91">    private String lastComplaintReason;</span>
+
+    @OneToMany(mappedBy = &quot;artwork&quot;, cascade = CascadeType.ALL, orphanRemoval = true)
+    private List&lt;Like&gt; artworkLikes;
+
+    @OneToMany(mappedBy = &quot;artwork&quot;, cascade = CascadeType.ALL, orphanRemoval = true)
+    private List&lt;Comment&gt; comments;
+
+    @PrePersist
+    protected void onCreate() {
+<span class="nc" id="L101">        dateCreation = LocalDate.now();</span>
+<span class="nc" id="L102">    }</span>
+
+<span class="nc" id="L104">    public enum ArtworkStatus {</span>
+<span class="nc" id="L105">        PENDING, APPROVED, REJECTED</span>
+    }
+
+    public void setImageFile(MultipartFile imageFile) {
+<span class="nc" id="L109">        this.imageFile = imageFile;</span>
+<span class="nc" id="L110">    }</span>
+
+    public List&lt;Long&gt; getCategoryIds() {
+<span class="nc" id="L113">        return categoryIds;</span>
+    }
+
+    public void setCategoryIds(List&lt;Long&gt; categoryIds) {
+<span class="nc" id="L117">        this.categoryIds = categoryIds;</span>
+<span class="nc" id="L118">    }</span>
+
+    public MultipartFile getImageFile() {
+<span class="nc" id="L121">        return imageFile;</span>
+    }
+
+    public Long getId() {
+<span class="nc" id="L125">        return id;</span>
+    }
+
+    public String getTitle() {
+<span class="nc" id="L129">        return title;</span>
+    }
+
+    public String getDescription() {
+<span class="nc" id="L133">        return description;</span>
+    }
+
+    public String getImagePath() {
+<span class="nc" id="L137">        return imagePath;</span>
+    }
+
+    public LocalDate getDateCreation() {
+<span class="nc" id="L141">        return dateCreation;</span>
+    }
+
+    public Set&lt;Exhibition&gt; getExhibitions() {
+<span class="nc" id="L145">        return exhibitions;</span>
+    }
+
+    public User getUser() {
+<span class="nc" id="L149">        return user;</span>
+    }
+
+    public String getStatus() {
+<span class="nc" id="L153">        return status;</span>
+    }
+
+<span class="nc" id="L156">    public Long getSimilarArtworkId() { return similarArtworkId; }</span>
+<span class="nc" id="L157">    public void setSimilarArtworkId(Long similarArtworkId) { this.similarArtworkId = similarArtworkId; }</span>
+
+<span class="nc" id="L159">    public String getSimilarArtworkTitle() { return similarArtworkTitle; }</span>
+<span class="nc" id="L160">    public void setSimilarArtworkTitle(String similarArtworkTitle) { this.similarArtworkTitle = similarArtworkTitle; }</span>
+
+<span class="nc" id="L162">    public String getAiReport() { return aiReport; }</span>
+<span class="nc" id="L163">    public void setAiReport(String aiReport) { this.aiReport = aiReport; }</span>
+    public String getRejectionReason() {
+<span class="nc" id="L165">        return rejectionReason;</span>
+    }
+
+    public void setRejectionReason(String rejectionReason) {
+<span class="nc" id="L169">        this.rejectionReason = rejectionReason;</span>
+<span class="nc" id="L170">    }</span>
+
+    public int getLikes() {
+<span class="nc" id="L173">        return likes;</span>
+    }
+
+    public int getViews() {
+<span class="nc" id="L177">        return views;</span>
+    }
+
+    public void setId(Long id) {
+<span class="nc" id="L181">        this.id = id;</span>
+<span class="nc" id="L182">    }</span>
+
+    public void setTitle(String title) {
+<span class="nc" id="L185">        this.title = title;</span>
+<span class="nc" id="L186">    }</span>
+
+    public void setDescription(String description) {
+<span class="nc" id="L189">        this.description = description;</span>
+<span class="nc" id="L190">    }</span>
+
+    public void setImagePath(String imagePath) {
+<span class="nc" id="L193">        this.imagePath = imagePath;</span>
+<span class="nc" id="L194">    }</span>
+
+    public void setDateCreation(LocalDate dateCreation) {
+<span class="nc" id="L197">        this.dateCreation = dateCreation;</span>
+<span class="nc" id="L198">    }</span>
+
+    public void setExhibitions(Set&lt;Exhibition&gt; exhibitions) {
+<span class="nc" id="L201">        this.exhibitions = exhibitions;</span>
+<span class="nc" id="L202">    }</span>
+
+    public void setUser(User user) {
+<span class="nc" id="L205">        this.user = user;</span>
+<span class="nc" id="L206">    }</span>
+
+    public void setStatus(String status) {
+<span class="nc" id="L209">        this.status = status;</span>
+<span class="nc" id="L210">    }</span>
+
+    public void setLikes(int likes) {
+<span class="nc" id="L213">        this.likes = likes;</span>
+<span class="nc" id="L214">    }</span>
+
+    public void setViews(int views) {
+<span class="nc" id="L217">        this.views = views;</span>
+<span class="nc" id="L218">    }</span>
+
+    public void setArtworkLikes(List&lt;Like&gt; artworkLikes) {
+<span class="nc" id="L221">        this.artworkLikes = artworkLikes;</span>
+<span class="nc" id="L222">    }</span>
+
+    public void setComments(List&lt;Comment&gt; comments) {
+<span class="nc" id="L225">        this.comments = comments;</span>
+<span class="nc" id="L226">    }</span>
+
+    public Set&lt;Category&gt; getCategories() {
+<span class="nc" id="L229">        return categories;</span>
+    }
+
+    public void setCategories(Set&lt;Category&gt; categories) {
+<span class="nc" id="L233">        this.categories = categories;</span>
+<span class="nc" id="L234">    }</span>
+
+    public List&lt;Like&gt; getArtworkLikes() {
+<span class="nc" id="L237">        return artworkLikes;</span>
+    }
+
+    public List&lt;Comment&gt; getComments() {
+<span class="nc" id="L241">        return comments;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

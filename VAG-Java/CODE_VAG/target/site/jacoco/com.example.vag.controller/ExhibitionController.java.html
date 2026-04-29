@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ru"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ExhibitionController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">vag</a> &gt; <a href="index.source.html" class="el_package">com.example.vag.controller</a> &gt; <span class="el_source">ExhibitionController.java</span></div><h1>ExhibitionController.java</h1><pre class="source lang-java linenums">package com.example.vag.controller;
+
+import com.example.vag.model.Artwork;
+import com.example.vag.model.Exhibition;
+import com.example.vag.model.User;
+import com.example.vag.service.ArtworkService;
+import com.example.vag.service.ExhibitionService;
+import com.example.vag.service.UserService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.transaction.annotation.Transactional;
+
+import javax.validation.Valid;
+import java.util.List;
+import java.util.Set;
+
+@Controller
+@RequestMapping(&quot;/exhibition&quot;)
+public class ExhibitionController {
+
+    private final ExhibitionService exhibitionService;
+    private final ArtworkService artworkService;
+    private final UserService userService;
+
+
+    public ExhibitionController(ExhibitionService exhibitionService,
+                                ArtworkService artworkService,
+<span class="nc" id="L36">                                UserService userService) {</span>
+<span class="nc" id="L37">        this.exhibitionService = exhibitionService;</span>
+<span class="nc" id="L38">        this.artworkService = artworkService;</span>
+<span class="nc" id="L39">        this.userService = userService;</span>
+<span class="nc" id="L40">    }</span>
+
+    @GetMapping(&quot;/list&quot;)
+    public String listExhibitions(@RequestParam(defaultValue = &quot;0&quot;) int page,
+                                  @RequestParam(defaultValue = &quot;12&quot;) int size,
+                                  Model model) {
+<span class="nc" id="L46">        page = Math.max(0, page);</span>
+        
+<span class="nc" id="L48">        Page&lt;Exhibition&gt; exhibitionPage = exhibitionService.findPaginatedExhibitions(page, size);</span>
+        
+<span class="nc" id="L50">        exhibitionPage.getContent().forEach(exhibition -&gt; {</span>
+<span class="nc" id="L51">            model.addAttribute(&quot;approvedArtworksCount_&quot; + exhibition.getId(), </span>
+<span class="nc" id="L52">                exhibitionService.countApprovedArtworksInExhibition(exhibition.getId()));</span>
+<span class="nc" id="L53">            model.addAttribute(&quot;firstApprovedArtwork_&quot; + exhibition.getId(), </span>
+<span class="nc" id="L54">                exhibitionService.getFirstApprovedArtworkInExhibition(exhibition.getId()));</span>
+<span class="nc" id="L55">        });</span>
+        
+<span class="nc" id="L57">        model.addAttribute(&quot;exhibitions&quot;, exhibitionPage);</span>
+<span class="nc" id="L58">        model.addAttribute(&quot;currentPage&quot;, page);</span>
+<span class="nc" id="L59">        model.addAttribute(&quot;totalPages&quot;, exhibitionPage.getTotalPages());</span>
+<span class="nc" id="L60">        return &quot;exhibition/list&quot;;</span>
+    }
+
+    @GetMapping(&quot;/details/{id}&quot;)
+    public String viewExhibition(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = &quot;0&quot;) int page,
+            @RequestParam(defaultValue = &quot;12&quot;) int size,
+            Model model) {
+
+<span class="nc" id="L70">        Exhibition exhibition = exhibitionService.findById(id).orElseThrow();</span>
+<span class="nc" id="L71">        Pageable pageable = PageRequest.of(page, size);</span>
+<span class="nc" id="L72">        Page&lt;Artwork&gt; artworkPage = artworkService.findByExhibitionId(id, pageable);</span>
+
+<span class="nc" id="L74">        model.addAttribute(&quot;exhibition&quot;, exhibition);</span>
+<span class="nc" id="L75">        model.addAttribute(&quot;artworks&quot;, artworkPage);</span>
+<span class="nc" id="L76">        model.addAttribute(&quot;approvedArtworksCount&quot;, exhibitionService.countApprovedArtworksInExhibition(id));</span>
+<span class="nc" id="L77">        model.addAttribute(&quot;firstApprovedArtwork&quot;, exhibitionService.getFirstApprovedArtworkInExhibition(id));</span>
+<span class="nc" id="L78">        return &quot;exhibition/details&quot;;</span>
+    }
+
+    @GetMapping(&quot;/create&quot;)
+    public String showCreateExhibition(Model model) {
+<span class="nc" id="L83">        model.addAttribute(&quot;exhibition&quot;, new Exhibition());</span>
+<span class="nc" id="L84">        return &quot;exhibition/create&quot;;</span>
+    }
+
+    @PostMapping(&quot;/create&quot;)
+    public String createExhibition(@Valid @ModelAttribute(&quot;exhibition&quot;) Exhibition exhibition,
+                                   BindingResult bindingResult) {
+<span class="nc bnc" id="L90" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L91">            return &quot;exhibition/create&quot;;</span>
+        }
+
+<span class="nc" id="L94">        User user = userService.getCurrentUser();</span>
+<span class="nc" id="L95">        exhibitionService.create(exhibition, user);</span>
+
+<span class="nc" id="L97">        return &quot;redirect:/user/profile?created&quot;;</span>
+    }
+
+    @GetMapping(&quot;/edit/{id}&quot;)
+    public String showEditForm(@PathVariable Long id, Model model) {
+<span class="nc" id="L102">        Exhibition existingExhibition = exhibitionService.findById(id).orElseThrow();</span>
+<span class="nc" id="L103">        User currentUser = userService.getCurrentUser();</span>
+
+<span class="nc bnc" id="L105" title="All 2 branches missed.">        if (!existingExhibition.getUser().getId().equals(currentUser.getId()) &amp;&amp;</span>
+<span class="nc bnc" id="L106" title="All 2 branches missed.">                !currentUser.hasRole(&quot;ADMIN&quot;)) {</span>
+<span class="nc" id="L107">            return &quot;redirect:/auth/access-denied&quot;;</span>
+        }
+
+<span class="nc" id="L110">        model.addAttribute(&quot;exhibition&quot;, existingExhibition);</span>
+<span class="nc" id="L111">        return &quot;exhibition/edit&quot;;</span>
+    }
+
+    @PostMapping(&quot;/edit&quot;)
+    public String updateExhibition(@Valid @ModelAttribute(&quot;exhibition&quot;) Exhibition exhibition,
+                                   BindingResult bindingResult) {
+<span class="nc bnc" id="L117" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L118">            return &quot;exhibition/edit&quot;;</span>
+        }
+
+<span class="nc" id="L121">        exhibitionService.update(exhibition);</span>
+
+<span class="nc" id="L123">        return &quot;redirect:/user/profile?updated&quot;;</span>
+    }
+
+    @PostMapping(&quot;/delete/{id}&quot;)
+    public String deleteExhibition(@PathVariable Long id) {
+<span class="nc" id="L128">        Exhibition exhibition = exhibitionService.findById(id).orElseThrow();</span>
+<span class="nc" id="L129">        User currentUser = userService.getCurrentUser();</span>
+
+<span class="nc bnc" id="L131" title="All 2 branches missed.">        if (!exhibition.getUser().getId().equals(currentUser.getId()) &amp;&amp;</span>
+<span class="nc bnc" id="L132" title="All 2 branches missed.">                !currentUser.hasRole(&quot;ADMIN&quot;)) {</span>
+<span class="nc" id="L133">            return &quot;redirect:/auth/access-denied&quot;;</span>
+        }
+
+<span class="nc" id="L136">        exhibitionService.delete(exhibition);</span>
+<span class="nc" id="L137">        return &quot;redirect:/user/profile?deleted&quot;;</span>
+    }
+
+    @PostMapping(&quot;/add-artwork/{exhibitionId}/{artworkId}&quot;)
+    public String addArtworkToExhibition(@PathVariable Long exhibitionId,
+                                         @PathVariable Long artworkId) {
+<span class="nc" id="L143">        Exhibition exhibition = exhibitionService.findById(exhibitionId).orElseThrow();</span>
+<span class="nc" id="L144">        Artwork artwork = artworkService.findById(artworkId).orElseThrow();</span>
+<span class="nc" id="L145">        User currentUser = userService.getCurrentUser();</span>
+
+<span class="nc bnc" id="L147" title="All 4 branches missed.">        if (exhibition.isAuthorOnly() &amp;&amp; !exhibition.getUser().getId().equals(currentUser.getId())) {</span>
+<span class="nc" id="L148">            return &quot;redirect:/auth/access-denied&quot;;</span>
+        }
+
+<span class="nc" id="L151">        exhibition.getArtworks().add(artwork);</span>
+<span class="nc" id="L152">        artwork.getExhibitions().add(exhibition);</span>
+<span class="nc" id="L153">        exhibitionService.save(exhibition);</span>
+<span class="nc" id="L154">        artworkService.save(artwork);</span>
+
+<span class="nc" id="L156">        return &quot;redirect:/exhibition/details/&quot; + exhibitionId;</span>
+    }
+
+    @PostMapping(&quot;/remove-artwork/{exhibitionId}/{artworkId}&quot;)
+    public String removeArtworkFromExhibition(@PathVariable Long exhibitionId,
+                                              @PathVariable Long artworkId) {
+<span class="nc" id="L162">        Exhibition exhibition = exhibitionService.findById(exhibitionId).orElseThrow();</span>
+<span class="nc" id="L163">        Artwork artwork = artworkService.findById(artworkId).orElseThrow();</span>
+<span class="nc" id="L164">        User currentUser = userService.getCurrentUser();</span>
+
+<span class="nc bnc" id="L166" title="All 2 branches missed.">        if (!exhibition.getUser().getId().equals(currentUser.getId()) &amp;&amp; </span>
+<span class="nc bnc" id="L167" title="All 2 branches missed.">            !artwork.getUser().getId().equals(currentUser.getId()) &amp;&amp;</span>
+<span class="nc bnc" id="L168" title="All 2 branches missed.">            !currentUser.hasRole(&quot;ADMIN&quot;)) {</span>
+<span class="nc" id="L169">            return &quot;redirect:/auth/access-denied&quot;;</span>
+        }
+
+<span class="nc" id="L172">        exhibitionService.removeArtworkFromExhibition(exhibitionId, artworkId);</span>
+
+<span class="nc" id="L174">        return &quot;redirect:/exhibition/details/&quot; + exhibitionId;</span>
+    }
+
+    @GetMapping(&quot;/exhibitions&quot;)
+    public String showExhibitions(Model model, @RequestParam(defaultValue = &quot;0&quot;) int page) {
+<span class="nc" id="L179">        page = Math.max(0, page);</span>
+        
+<span class="nc" id="L181">        int pageSize = 6;</span>
+<span class="nc" id="L182">        Pageable pageable = PageRequest.of(page, pageSize, Sort.by(&quot;id&quot;).descending());</span>
+<span class="nc" id="L183">        Page&lt;Exhibition&gt; exhibitionPage = exhibitionService.getPublicExhibitions(pageable);</span>
+        
+<span class="nc bnc" id="L185" title="All 4 branches missed.">        if (page &gt; 0 &amp;&amp; exhibitionPage.getContent().isEmpty()) {</span>
+<span class="nc" id="L186">            return &quot;redirect:/exhibition/exhibitions?page=&quot; + (page - 1);</span>
+        }
+        
+<span class="nc" id="L189">        exhibitionPage.getContent().forEach(exhibition -&gt; {</span>
+<span class="nc" id="L190">            model.addAttribute(&quot;approvedArtworksCount_&quot; + exhibition.getId(), </span>
+<span class="nc" id="L191">                exhibitionService.countApprovedArtworksInExhibition(exhibition.getId()));</span>
+<span class="nc" id="L192">            model.addAttribute(&quot;firstApprovedArtwork_&quot; + exhibition.getId(), </span>
+<span class="nc" id="L193">                exhibitionService.getFirstApprovedArtworkInExhibition(exhibition.getId()));</span>
+<span class="nc" id="L194">        });</span>
+        
+<span class="nc" id="L196">        model.addAttribute(&quot;exhibitions&quot;, exhibitionPage);</span>
+<span class="nc" id="L197">        return &quot;exhibition/list&quot;;</span>
+    }
+
+    @GetMapping(&quot;/add-exist-artwork/{exhibitionId}&quot;)
+    @Transactional(readOnly = true)
+    public String addExistArtwork(@PathVariable Long exhibitionId, Model model) {
+<span class="nc" id="L203">        Exhibition exhibition = exhibitionService.findById(exhibitionId).orElseThrow();</span>
+<span class="nc" id="L204">        User currentUser = userService.getCurrentUser();</span>
+        
+<span class="nc" id="L206">        List&lt;Artwork&gt; userArtworks = artworkService.findByUserWithDetails(currentUser);</span>
+        
+<span class="nc" id="L208">        Set&lt;Artwork&gt; exhibitionArtworks = exhibition.getArtworks();</span>
+        
+<span class="nc" id="L210">        model.addAttribute(&quot;exhibition&quot;, exhibition);</span>
+<span class="nc" id="L211">        model.addAttribute(&quot;artworks&quot;, userArtworks);</span>
+<span class="nc" id="L212">        model.addAttribute(&quot;exhibitionArtworks&quot;, exhibitionArtworks);</span>
+<span class="nc" id="L213">        return &quot;exhibition/add-exist-artwork&quot;;</span>
+    }
+
+    @PostMapping(&quot;/add-exist-artwork/{exhibitionId}/{artworkId}&quot;)
+    @Transactional
+    public String addExistArtwork(@PathVariable Long exhibitionId, @PathVariable Long artworkId) {
+<span class="nc" id="L219">        Exhibition exhibition = exhibitionService.findById(exhibitionId).orElseThrow();</span>
+<span class="nc" id="L220">        Artwork artwork = artworkService.findByIdWithCategories(artworkId).orElseThrow();</span>
+<span class="nc" id="L221">        User currentUser = userService.getCurrentUser();</span>
+
+<span class="nc bnc" id="L223" title="All 4 branches missed.">        if (exhibition.isAuthorOnly() &amp;&amp; !exhibition.getUser().getId().equals(currentUser.getId())) {</span>
+<span class="nc" id="L224">            return &quot;redirect:/auth/access-denied&quot;;</span>
+        }
+
+<span class="nc bnc" id="L227" title="All 2 branches missed.">        if (!artwork.getUser().getId().equals(currentUser.getId())) {</span>
+<span class="nc" id="L228">            return &quot;redirect:/auth/access-denied&quot;;</span>
+        }
+
+<span class="nc" id="L231">        exhibition.getArtworks().add(artwork);</span>
+<span class="nc" id="L232">        artwork.getExhibitions().add(exhibition);</span>
+<span class="nc" id="L233">        exhibitionService.save(exhibition);</span>
+<span class="nc" id="L234">        artworkService.save(artwork);</span>
+
+<span class="nc" id="L236">        return &quot;redirect:/exhibition/details/&quot; + exhibitionId;</span>
+    }
+
+    @PostMapping(&quot;/remove-exist-artwork/{exhibitionId}/{artworkId}&quot;)
+    public String removeExistArtwork(@PathVariable Long exhibitionId, @PathVariable Long artworkId) {
+<span class="nc" id="L241">        Exhibition exhibition = exhibitionService.findById(exhibitionId).orElseThrow();</span>
+<span class="nc" id="L242">        Artwork artwork = artworkService.findById(artworkId).orElseThrow();</span>
+<span class="nc" id="L243">        User currentUser = userService.getCurrentUser();</span>
+
+<span class="nc bnc" id="L245" title="All 2 branches missed.">        if (!exhibition.getUser().getId().equals(currentUser.getId()) &amp;&amp;</span>
+<span class="nc bnc" id="L246" title="All 2 branches missed.">            !artwork.getUser().getId().equals(currentUser.getId()) &amp;&amp;</span>
+<span class="nc bnc" id="L247" title="All 2 branches missed.">            !currentUser.hasRole(&quot;ADMIN&quot;)) {</span>
+<span class="nc" id="L248">            return &quot;redirect:/auth/access-denied&quot;;</span>
+        }
+
+<span class="nc" id="L251">        exhibitionService.removeArtworkFromExhibition(exhibitionId, artworkId);</span>
+
+<span class="nc" id="L253">        return &quot;redirect:/exhibition/add-exist-artwork/&quot; + exhibitionId;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ru"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ImageHashService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">vag</a> &gt; <a href="index.source.html" class="el_package">com.example.vag.service.impl</a> &gt; <span class="el_source">ImageHashService.java</span></div><h1>ImageHashService.java</h1><pre class="source lang-java linenums">package com.example.vag.service.impl;
+
+import com.example.vag.dto.SimilarArtworkInfo;
+import com.example.vag.model.Artwork;
+import com.example.vag.model.ImageHash;
+import com.example.vag.repository.ImageHashRepository;
+import com.example.vag.util.HashUtils;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Optional;
+
+@Service
+public class ImageHashService {
+
+    private final ImageHashRepository imageHashRepository;
+
+<span class="nc" id="L21">    public ImageHashService(ImageHashRepository imageHashRepository) {</span>
+<span class="nc" id="L22">        this.imageHashRepository = imageHashRepository;</span>
+<span class="nc" id="L23">    }</span>
+
+    @Transactional
+    public ImageHash saveHash(Artwork artwork, MultipartFile file) throws IOException {
+<span class="nc" id="L27">        String pHash = HashUtils.computePHash(file);</span>
+<span class="nc" id="L28">        String md5 = HashUtils.computeMD5(file);</span>
+<span class="nc" id="L29">        ImageHash hash = new ImageHash(artwork, pHash, md5);</span>
+<span class="nc" id="L30">        hash.setActive(true);</span>
+<span class="nc" id="L31">        return imageHashRepository.save(hash);</span>
+    }
+
+    @Transactional
+    public void deactivateByArtworkId(Long artworkId) {
+<span class="nc" id="L36">        imageHashRepository.findByArtworkId(artworkId).ifPresent(hash -&gt; {</span>
+<span class="nc" id="L37">            hash.setActive(false);</span>
+<span class="nc" id="L38">            imageHashRepository.save(hash);</span>
+<span class="nc" id="L39">        });</span>
+<span class="nc" id="L40">    }</span>
+
+    @Transactional
+    public void activateByArtworkId(Long artworkId) {
+<span class="nc" id="L44">        imageHashRepository.findByArtworkId(artworkId).ifPresent(hash -&gt; {</span>
+<span class="nc" id="L45">            hash.setActive(true);</span>
+<span class="nc" id="L46">            imageHashRepository.save(hash);</span>
+<span class="nc" id="L47">        });</span>
+<span class="nc" id="L48">    }</span>
+
+    public boolean isExactDuplicate(MultipartFile file) throws IOException {
+<span class="nc" id="L51">        String md5 = HashUtils.computeMD5(file);</span>
+<span class="nc" id="L52">        return imageHashRepository.findByMd5(md5)</span>
+<span class="nc" id="L53">                .filter(ImageHash::isActive)</span>
+<span class="nc" id="L54">                .isPresent();</span>
+    }
+
+/*    public boolean isSimilarToExisting(MultipartFile file, Long excludeArtworkId) throws IOException {
+        String newHash = HashUtils.computePHash(file);
+        if (newHash == null) return false;
+
+        List&lt;ImageHash&gt; existingHashes = imageHashRepository.findAllActiveHashesExcluding(excludeArtworkId);
+        for (ImageHash existing : existingHashes) {
+            if (existing.getPHash() != null &amp;&amp; HashUtils.isSimilar(newHash, existing.getPHash(), 8)) {
+                return true;
+            }
+        }
+        return false;
+    }*/
+
+    public boolean isSimilarToExisting(MultipartFile file, Long excludeArtworkId) throws IOException {
+<span class="nc" id="L71">        String newHash = HashUtils.computePHash(file);</span>
+<span class="nc bnc" id="L72" title="All 2 branches missed.">        if (newHash == null) return false;</span>
+
+<span class="nc" id="L74">        System.out.println(&quot;pHash нового: &quot; + newHash);</span>
+
+<span class="nc" id="L76">        List&lt;ImageHash&gt; existingHashes = imageHashRepository.findAllActiveHashesExcluding(excludeArtworkId);</span>
+
+<span class="nc bnc" id="L78" title="All 2 branches missed.">        for (ImageHash existing : existingHashes) {</span>
+<span class="nc bnc" id="L79" title="All 2 branches missed.">            if (existing.getPHash() != null) {</span>
+<span class="nc" id="L80">                int distance = HashUtils.hammingDistance(newHash, existing.getPHash());</span>
+
+<span class="nc" id="L82">                System.out.println(&quot;     Сравнение с artwork #&quot; + existing.getArtwork().getId()</span>
+<span class="nc" id="L83">                        + &quot; (pHash: &quot; + existing.getPHash() + &quot;): расстояние = &quot; + distance);</span>
+
+<span class="nc bnc" id="L85" title="All 2 branches missed.">                if (distance &lt;= 10) {</span>
+<span class="nc" id="L86">                    System.out.println(&quot; Найдено похожее! (расстояние &quot; + distance + &quot; ≤ 10)&quot;);</span>
+<span class="nc" id="L87">                    return true;</span>
+                }
+            }
+<span class="nc" id="L90">        }</span>
+<span class="nc" id="L91">        return false;</span>
+    }
+    @Transactional
+    public void deleteByArtworkId(Long artworkId) {
+<span class="nc" id="L95">        imageHashRepository.findByArtworkId(artworkId)</span>
+<span class="nc" id="L96">                .ifPresent(imageHashRepository::delete);</span>
+<span class="nc" id="L97">    }</span>
+
+    /**
+     * Находит информацию о дубликате по MD5.
+     * @return информация о дубликате или null
+     */
+    public SimilarArtworkInfo findDuplicateByMd5(MultipartFile file) throws IOException {
+<span class="nc" id="L104">        String md5 = HashUtils.computeMD5(file);</span>
+<span class="nc" id="L105">        Optional&lt;ImageHash&gt; existing = imageHashRepository.findByMd5(md5);</span>
+
+<span class="nc bnc" id="L107" title="All 2 branches missed.">        if (existing.isPresent()) {</span>
+<span class="nc" id="L108">            Artwork duplicate = existing.get().getArtwork();</span>
+<span class="nc" id="L109">            return new SimilarArtworkInfo(</span>
+<span class="nc" id="L110">                    duplicate.getId(),</span>
+<span class="nc" id="L111">                    duplicate.getTitle(),</span>
+                    0  // расстояние 0 = точное совпадение
+            );
+        }
+<span class="nc" id="L115">        return null;</span>
+    }
+
+    /**
+     * Находит визуально похожую работу по pHash.
+     * @return информация о похожей работе или null
+     */
+    public SimilarArtworkInfo findSimilarArtwork(MultipartFile file, Long excludeArtworkId) throws IOException {
+<span class="nc" id="L123">        String newHash = HashUtils.computePHash(file);</span>
+<span class="nc bnc" id="L124" title="All 2 branches missed.">        if (newHash == null) return null;</span>
+
+<span class="nc" id="L126">        List&lt;ImageHash&gt; existingHashes = imageHashRepository.findAllActiveHashesExcluding(excludeArtworkId);</span>
+
+<span class="nc bnc" id="L128" title="All 2 branches missed.">        for (ImageHash existing : existingHashes) {</span>
+<span class="nc bnc" id="L129" title="All 2 branches missed.">            if (existing.getPHash() != null) {</span>
+<span class="nc" id="L130">                int distance = HashUtils.hammingDistance(newHash, existing.getPHash());</span>
+<span class="nc bnc" id="L131" title="All 2 branches missed.">                if (distance &lt;= 10) {</span>
+<span class="nc" id="L132">                    return new SimilarArtworkInfo(</span>
+<span class="nc" id="L133">                            existing.getArtwork().getId(),</span>
+<span class="nc" id="L134">                            existing.getArtwork().getTitle(),</span>
+                            distance
+                    );
+                }
+            }
+<span class="nc" id="L139">        }</span>
+<span class="nc" id="L140">        return null;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

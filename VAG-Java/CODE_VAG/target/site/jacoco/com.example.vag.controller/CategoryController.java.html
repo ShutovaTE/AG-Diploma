@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ru"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CategoryController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">vag</a> &gt; <a href="index.source.html" class="el_package">com.example.vag.controller</a> &gt; <span class="el_source">CategoryController.java</span></div><h1>CategoryController.java</h1><pre class="source lang-java linenums">package com.example.vag.controller;
+
+import com.example.vag.model.Artwork;
+import com.example.vag.model.Category;
+import com.example.vag.service.ArtworkService;
+import com.example.vag.service.CategoryService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@Controller
+@RequestMapping(&quot;/category&quot;)
+public class CategoryController {
+
+    private final CategoryService categoryService;
+    private final ArtworkService artworkService;
+
+<span class="nc" id="L23">    public CategoryController(CategoryService categoryService, ArtworkService artworkService) {</span>
+<span class="nc" id="L24">        this.categoryService = categoryService;</span>
+<span class="nc" id="L25">        this.artworkService = artworkService;</span>
+<span class="nc" id="L26">    }</span>
+
+    @GetMapping(&quot;/list&quot;)
+    public String listCategories(
+            @RequestParam(defaultValue = &quot;0&quot;) int page,
+            @RequestParam(defaultValue = &quot;12&quot;) int size,
+            Model model) {
+
+<span class="nc" id="L34">        Pageable pageable = PageRequest.of(page, size);</span>
+<span class="nc" id="L35">        Page&lt;Category&gt; categoryPage = categoryService.findAll(pageable);</span>
+
+<span class="nc" id="L37">        categoryPage.forEach(category -&gt;</span>
+<span class="nc" id="L38">                category.setApprovedArtworksCount(</span>
+<span class="nc" id="L39">                        artworkService.countApprovedArtworksByCategoryId(category.getId())</span>
+                ));
+
+<span class="nc" id="L42">        model.addAttribute(&quot;categories&quot;, categoryPage);</span>
+<span class="nc" id="L43">        return &quot;category/list&quot;;</span>
+    }
+
+    @GetMapping(&quot;/details/{id}&quot;)
+    public String viewCategory(@PathVariable Long id,
+                               @RequestParam(defaultValue = &quot;0&quot;) int page,
+                               @RequestParam(defaultValue = &quot;12&quot;) int size,
+                               Model model) {
+<span class="nc" id="L51">        Category category = categoryService.findById(id).orElseThrow();</span>
+<span class="nc" id="L52">        Page&lt;Artwork&gt; artworkPage = artworkService.findByCategoryId(id, PageRequest.of(page, size));</span>
+
+<span class="nc" id="L54">        model.addAttribute(&quot;category&quot;, category);</span>
+<span class="nc" id="L55">        model.addAttribute(&quot;artworks&quot;, artworkPage);</span>
+<span class="nc" id="L56">        return &quot;category/details&quot;;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

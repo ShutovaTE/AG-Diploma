@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ru"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ModerationServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">vag</a> &gt; <a href="index.source.html" class="el_package">com.example.vag.service.impl</a> &gt; <span class="el_source">ModerationServiceImpl.java</span></div><h1>ModerationServiceImpl.java</h1><pre class="source lang-java linenums">package com.example.vag.service.impl;
+
+import com.example.vag.dto.ModerationResult;
+import com.example.vag.dto.SimilarArtworkInfo;
+import com.example.vag.service.ModerationService;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.util.HtmlUtils;
+
+@Service
+/**
+ * Выполняет проверку изображений по нескольким источникам
+ * и формирует итоговый отчёт модерации.
+ */
+public class ModerationServiceImpl implements ModerationService {
+
+    private final YandexVisionService visionService;
+    private final ImageHashService imageHashService;
+    private final NSFWDetectionService nsfwService;
+
+    public ModerationServiceImpl(YandexVisionService visionService,
+                                 ImageHashService imageHashService,
+<span class="fc" id="L23">                                 NSFWDetectionService nsfwService) {</span>
+<span class="fc" id="L24">        this.visionService = visionService;</span>
+<span class="fc" id="L25">        this.imageHashService = imageHashService;</span>
+<span class="fc" id="L26">        this.nsfwService = nsfwService;</span>
+<span class="fc" id="L27">    }</span>
+
+    @Override
+    public ModerationResult moderateImage(MultipartFile file, Long excludeArtworkId) {
+<span class="fc" id="L31">        ModerationResult result = new ModerationResult();</span>
+<span class="fc" id="L32">        result.setApproved(true);</span>
+
+<span class="fc" id="L34">        StringBuilder report = new StringBuilder();</span>
+<span class="fc" id="L35">        report.append(&quot;ОТЧЁТ ИИ-МОДЕРАЦИИ\n&quot;);</span>
+<span class="fc" id="L36">        report.append(&quot;Файл: &quot;).append(file.getOriginalFilename()).append(&quot;\n&quot;);</span>
+<span class="fc" id="L37">        report.append(&quot;Размер: &quot;).append(file.getSize()).append(&quot; байт\n\n&quot;);</span>
+
+        try {
+            // 1. Yandex Vision
+<span class="fc" id="L41">            report.append(&quot;1. Yandex Vision (облачный API):\n&quot;);</span>
+            try {
+<span class="fc" id="L43">                boolean hasExplicit = visionService.hasExplicitContent(file);</span>
+<span class="fc bfc" id="L44" title="All 2 branches covered.">                report.append(&quot;   Результат: &quot;).append(hasExplicit ? &quot;ОБНАРУЖЕН 18+&quot; : &quot;OK&quot;).append(&quot;\n&quot;);</span>
+<span class="fc bfc" id="L45" title="All 2 branches covered.">                if (hasExplicit) {</span>
+<span class="fc" id="L46">                    result.setApproved(false);</span>
+<span class="fc" id="L47">                    result.setRejectionReason(&quot;Изображение содержит контент 18+&quot;);</span>
+<span class="fc" id="L48">                    result.setAiReport(report.toString());</span>
+<span class="fc" id="L49">                    return result;</span>
+                }
+<span class="fc" id="L51">            } catch (Exception e) {</span>
+<span class="fc" id="L52">                report.append(&quot;   Ошибка: &quot;).append(e.getMessage()).append(&quot;\n&quot;);</span>
+<span class="fc" id="L53">            }</span>
+
+            // 2. NSFW
+<span class="fc" id="L56">            report.append(&quot;\n2. NSFW-модель ONNX (локальная):\n&quot;);</span>
+            try {
+<span class="fc bfc" id="L58" title="All 2 branches covered.">                if (nsfwService.isAvailable()) {</span>
+<span class="fc" id="L59">                    NSFWDetectionService.NsfwAnalysisResult nsfwAnalysis = nsfwService.analyze(file);</span>
+<span class="fc" id="L60">                    boolean isNsfw = nsfwAnalysis.isExplicit();</span>
+<span class="fc bfc" id="L61" title="All 2 branches covered.">                    report.append(&quot;   Результат: &quot;).append(isNsfw ? &quot; ОБНАРУЖЕН 18+&quot; : &quot;OK&quot;).append(&quot;\n&quot;);</span>
+<span class="fc bfc" id="L62" title="All 2 branches covered.">                    if (isNsfw) {</span>
+<span class="fc" id="L63">                        String reason = nsfwService.getRejectionReason(nsfwAnalysis.getScores());</span>
+<span class="fc" id="L64">                        result.setApproved(false);</span>
+<span class="fc" id="L65">                        result.setRejectionReason(reason);</span>
+<span class="fc" id="L66">                        result.setAiReport(report.toString());</span>
+<span class="fc" id="L67">                        return result;</span>
+                    }
+<span class="fc" id="L69">                } else {</span>
+<span class="fc" id="L70">                    report.append(&quot;   Модель недоступна, пропущено\n&quot;);</span>
+                }
+<span class="nc" id="L72">            } catch (Exception e) {</span>
+<span class="nc" id="L73">                report.append(&quot;   Ошибка: &quot;).append(e.getMessage()).append(&quot;\n&quot;);</span>
+<span class="fc" id="L74">            }</span>
+
+            // 3. MD5 (точное совпадение)
+<span class="fc" id="L77">            report.append(&quot;\n3. MD5 (точное совпадение):\n&quot;);</span>
+<span class="fc" id="L78">            SimilarArtworkInfo duplicate = imageHashService.findDuplicateByMd5(file);</span>
+<span class="fc bfc" id="L79" title="All 2 branches covered.">            if (duplicate != null) {</span>
+<span class="fc" id="L80">                String safeTitle = HtmlUtils.htmlEscape(duplicate.getTitle());</span>
+<span class="fc" id="L81">                report.append(&quot;   Результат: НАЙДЕН ДУБЛИКАТ\n&quot;);</span>
+<span class="fc" id="L82">                report.append(&quot;   Дубликат работы: \&quot;&quot;).append(duplicate.getTitle()).append(&quot;\&quot;\n&quot;);</span>
+<span class="fc" id="L83">                report.append(&quot;   Ссылка на дубликат работы: /vag/artwork/details/&quot;)</span>
+<span class="fc" id="L84">                        .append(duplicate.getArtworkId()).append(&quot;\n&quot;);</span>
+
+<span class="fc" id="L86">                result.setApproved(false);</span>
+
+                // Для уведомления пользователю — чистый текст
+<span class="fc" id="L89">                result.setRejectionReason(&quot;Это изображение уже опубликовано (Название опубликованной работы «&quot; + duplicate.getTitle() + &quot;»).&quot;);</span>
+
+                // Для админ-панели — HTML с ссылкой (сохраняем в aiReport или отдельное поле)
+<span class="fc" id="L92">                result.setRejectionReasonHtml(</span>
+                        &quot;Это изображение уже опубликовано. &quot; +
+<span class="fc" id="L94">                                &quot;&lt;a href='/vag/artwork/details/&quot; + duplicate.getArtworkId() + &quot;' &quot; +</span>
+                                &quot;target='_blank' style='color: #007bff; font-weight: bold; text-decoration: underline;'&gt;&quot; +
+                                &quot;Посмотреть работу «&quot; + safeTitle + &quot;»&quot; +
+                                &quot;&lt;/a&gt;&quot;
+                );
+
+<span class="fc" id="L100">                result.setSimilarArtworkId(duplicate.getArtworkId());</span>
+<span class="fc" id="L101">                result.setSimilarArtworkTitle(duplicate.getTitle());</span>
+<span class="fc" id="L102">                result.setAiReport(report.toString());</span>
+<span class="fc" id="L103">                return result;</span>
+            }
+<span class="fc" id="L105">            report.append(&quot;   Результат: OK\n&quot;);</span>
+
+            // 4. pHash (визуальное сходство)
+<span class="fc" id="L108">            report.append(&quot;\n4. pHash (визуальное сходство):\n&quot;);</span>
+<span class="fc" id="L109">            SimilarArtworkInfo similar = imageHashService.findSimilarArtwork(file, excludeArtworkId);</span>
+<span class="fc bfc" id="L110" title="All 2 branches covered.">            if (similar != null) {</span>
+<span class="fc" id="L111">                String safeTitle = HtmlUtils.htmlEscape(similar.getTitle());</span>
+<span class="fc" id="L112">                int similarityPercent = similar.getSimilarityPercent();</span>
+<span class="fc" id="L113">                report.append(&quot;   Результат: НАЙДЕНО ПОХОЖЕЕ ИЗОБРАЖЕНИЕ\n&quot;);</span>
+
+<span class="fc" id="L115">                result.setNeedsManualReview(true);</span>
+
+                // Для уведомления — чистый текст
+<span class="fc" id="L118">                result.setManualReviewReason(&quot;Изображение похоже на работу «&quot; + similar.getTitle() + &quot;» (сходство: &quot; + similarityPercent + &quot;%).&quot;);</span>
+
+                // Для админ-панели — HTML с ссылкой
+<span class="fc" id="L121">                result.setManualReviewReasonHtml(</span>
+                        &quot;Изображение очень похоже на существующую работу. &quot; +
+<span class="fc" id="L123">                                &quot;&lt;a href='/vag/artwork/details/&quot; + similar.getArtworkId() + &quot;' &quot; +</span>
+                                &quot;target='_blank' style='color: #007bff; font-weight: bold; text-decoration: underline;'&gt;&quot; +
+                                &quot;Посмотреть работу «&quot; + safeTitle + &quot;»&quot; +
+                                &quot;&lt;/a&gt; (сходство: &quot; + similarityPercent + &quot;%)&quot;
+                );
+
+<span class="fc" id="L129">                result.setSimilarArtworkId(similar.getArtworkId());</span>
+<span class="fc" id="L130">                result.setSimilarArtworkTitle(similar.getTitle());</span>
+<span class="fc" id="L131">                result.setApproved(false);</span>
+<span class="fc" id="L132">                result.setAiReport(report.toString());</span>
+<span class="fc" id="L133">                return result;</span>
+            }
+<span class="fc" id="L135">            report.append(&quot;   Результат: OK\n&quot;);</span>
+
+<span class="fc" id="L137">            report.append(&quot;\nИТОГ: ПРОВЕРКА ПРОЙДЕНА&quot;);</span>
+<span class="fc" id="L138">            result.setAiReport(report.toString());</span>
+
+<span class="fc" id="L140">        } catch (Exception e) {</span>
+<span class="fc" id="L141">            report.append(&quot;\nОШИБКА: &quot;).append(e.getMessage());</span>
+<span class="fc" id="L142">            result.setApproved(false);</span>
+<span class="fc" id="L143">            result.setRejectionReason(&quot;Ошибка при анализе: &quot; + e.getMessage());</span>
+<span class="fc" id="L144">            result.setAiReport(report.toString());</span>
+<span class="fc" id="L145">        }</span>
+
+<span class="fc" id="L147">        return result;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

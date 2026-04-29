@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ru"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RecommendationServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">vag</a> &gt; <a href="index.source.html" class="el_package">com.example.vag.recommendation.service</a> &gt; <span class="el_source">RecommendationServiceImpl.java</span></div><h1>RecommendationServiceImpl.java</h1><pre class="source lang-java linenums">package com.example.vag.recommendation.service;
+
+import com.example.vag.recommendation.dto.RecommendationDTO;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+public class RecommendationServiceImpl implements RecommendationService {
+
+<span class="nc" id="L19">    private static final Logger logger = Logger.getLogger(RecommendationServiceImpl.class.getName());</span>
+
+    private final String pythonExecutable;
+    private final String scriptPath;
+    private final ObjectMapper objectMapper;
+
+    public RecommendationServiceImpl() {
+<span class="nc" id="L26">        this(&quot;python&quot;, getDefaultScriptPath());</span>
+<span class="nc" id="L27">    }</span>
+
+<span class="nc" id="L29">    public RecommendationServiceImpl(String pythonExecutable, String scriptPath) {</span>
+<span class="nc" id="L30">        this.pythonExecutable = pythonExecutable;</span>
+<span class="nc" id="L31">        this.scriptPath = scriptPath;</span>
+<span class="nc" id="L32">        this.objectMapper = new ObjectMapper();</span>
+<span class="nc" id="L33">        logger.info(&quot;RecommendationService initialized with script: &quot; + scriptPath);</span>
+<span class="nc" id="L34">    }</span>
+
+    private static String getDefaultScriptPath() {
+<span class="nc" id="L37">        String projectRoot = System.getProperty(&quot;user.dir&quot;);</span>
+<span class="nc" id="L38">        return Paths.get(projectRoot, &quot;..&quot;, &quot;ML-Recommendation&quot;, &quot;recommendation_engine.py&quot;).toString();</span>
+    }
+
+    @Override
+    public List&lt;RecommendationDTO&gt; getRecommendationsForUser(Long userId, int topN) {
+<span class="nc bnc" id="L43" title="All 2 branches missed.">        if (!isRecommendationSystemAvailable()) {</span>
+<span class="nc" id="L44">            logger.warning(&quot;Система рекомендаций недоступна. Возвращается пустой список.&quot;);</span>
+<span class="nc" id="L45">            return Collections.emptyList();</span>
+        }
+
+        try {
+<span class="nc" id="L49">            ProcessBuilder processBuilder = new ProcessBuilder(</span>
+<span class="nc" id="L50">                pythonExecutable, scriptPath, &quot;--user_id&quot;, userId.toString()</span>
+            );
+<span class="nc" id="L52">            processBuilder.environment().put(&quot;PYTHONIOENCODING&quot;, &quot;utf-8&quot;);</span>
+<span class="nc" id="L53">            processBuilder.redirectErrorStream(true);</span>
+<span class="nc" id="L54">            Process process = processBuilder.start();</span>
+
+<span class="nc" id="L56">            StringBuilder output = new StringBuilder();</span>
+<span class="nc" id="L57">            try (BufferedReader reader = new BufferedReader(</span>
+<span class="nc" id="L58">                    new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {</span>
+                String line;
+<span class="nc bnc" id="L60" title="All 2 branches missed.">                while ((line = reader.readLine()) != null) {</span>
+<span class="nc" id="L61">                    output.append(line);</span>
+                }
+            }
+
+<span class="nc" id="L65">            int exitCode = process.waitFor();</span>
+<span class="nc bnc" id="L66" title="All 2 branches missed.">            if (exitCode != 0) {</span>
+<span class="nc" id="L67">                logger.severe(&quot;Python-скрипт завершился с кодом &quot; + exitCode +</span>
+<span class="nc" id="L68">                              &quot;. Вывод: &quot; + output.toString());</span>
+<span class="nc" id="L69">                return Collections.emptyList();</span>
+            }
+
+<span class="nc" id="L72">            return parseRecommendations(output.toString());</span>
+
+<span class="nc" id="L74">        } catch (Exception e) {</span>
+<span class="nc" id="L75">            logger.log(Level.SEVERE, &quot;Ошибка вызова Python-скрипта рекомендаций&quot;, e);</span>
+<span class="nc" id="L76">            return Collections.emptyList();</span>
+        }
+    }
+
+    @SuppressWarnings(&quot;unchecked&quot;)
+    private List&lt;RecommendationDTO&gt; parseRecommendations(String jsonOutput) {
+        try {
+            // Удаляем возможные предупреждения в начале (на всякий случай)
+<span class="nc" id="L84">            int jsonStart = jsonOutput.indexOf('{');</span>
+<span class="nc bnc" id="L85" title="All 2 branches missed.">            if (jsonStart &gt; 0) {</span>
+<span class="nc" id="L86">                jsonOutput = jsonOutput.substring(jsonStart);</span>
+            }
+
+<span class="nc" id="L89">            var rootNode = objectMapper.readTree(jsonOutput);</span>
+
+<span class="nc bnc" id="L91" title="All 2 branches missed.">            if (rootNode.has(&quot;error&quot;)) {</span>
+<span class="nc" id="L92">                logger.warning(&quot;Python-скрипт вернул ошибку: &quot; + rootNode.get(&quot;error&quot;).asText());</span>
+<span class="nc" id="L93">                return Collections.emptyList();</span>
+            }
+
+<span class="nc bnc" id="L96" title="All 2 branches missed.">            if (!rootNode.has(&quot;recommendations&quot;)) {</span>
+<span class="nc" id="L97">                logger.warning(&quot;В ответе отсутствует поле 'recommendations'&quot;);</span>
+<span class="nc" id="L98">                return Collections.emptyList();</span>
+            }
+
+<span class="nc" id="L101">            var recommendationsNode = rootNode.get(&quot;recommendations&quot;);</span>
+<span class="nc" id="L102">            List&lt;RecommendationDTO&gt; recommendations = new ArrayList&lt;&gt;();</span>
+
+<span class="nc bnc" id="L104" title="All 2 branches missed.">            for (var recNode : recommendationsNode) {</span>
+<span class="nc" id="L105">                RecommendationDTO dto = new RecommendationDTO();</span>
+<span class="nc bnc" id="L106" title="All 2 branches missed.">                dto.setArtworkId(recNode.has(&quot;artwork_id&quot;) ? recNode.get(&quot;artwork_id&quot;).asLong() : null);</span>
+<span class="nc bnc" id="L107" title="All 2 branches missed.">                dto.setTitle(recNode.has(&quot;title&quot;) ? recNode.get(&quot;title&quot;).asText() : &quot;&quot;);</span>
+<span class="nc bnc" id="L108" title="All 2 branches missed.">                dto.setAuthor(recNode.has(&quot;author&quot;) ? recNode.get(&quot;author&quot;).asText() : &quot;&quot;);</span>
+<span class="nc bnc" id="L109" title="All 2 branches missed.">                dto.setCategories(recNode.has(&quot;categories&quot;) ? recNode.get(&quot;categories&quot;).asText() : &quot;&quot;);</span>
+<span class="nc bnc" id="L110" title="All 2 branches missed.">                dto.setLikes(recNode.has(&quot;likes&quot;) ? recNode.get(&quot;likes&quot;).asInt() : 0);</span>
+<span class="nc bnc" id="L111" title="All 2 branches missed.">                dto.setScore(recNode.has(&quot;score&quot;) ? recNode.get(&quot;score&quot;).asDouble() : 0.0);</span>
+<span class="nc" id="L112">                recommendations.add(dto);</span>
+<span class="nc" id="L113">            }</span>
+
+<span class="nc" id="L115">            return recommendations;</span>
+
+<span class="nc" id="L117">        } catch (Exception e) {</span>
+<span class="nc" id="L118">            logger.log(Level.SEVERE, &quot;Ошибка парсинга JSON-ответа: &quot; + jsonOutput, e);</span>
+<span class="nc" id="L119">            return Collections.emptyList();</span>
+        }
+    }
+
+    @Override
+    public boolean isRecommendationSystemAvailable() {
+        try {
+<span class="nc" id="L126">            File scriptFile = new File(scriptPath);</span>
+<span class="nc bnc" id="L127" title="All 2 branches missed.">            if (!scriptFile.exists()) {</span>
+<span class="nc" id="L128">                logger.warning(&quot;Скрипт рекомендаций не найден: &quot; + scriptPath);</span>
+<span class="nc" id="L129">                return false;</span>
+            }
+
+<span class="nc" id="L132">            ProcessBuilder checkProcess = new ProcessBuilder(pythonExecutable, &quot;--version&quot;);</span>
+<span class="nc" id="L133">            Process process = checkProcess.start();</span>
+<span class="nc" id="L134">            int exitCode = process.waitFor();</span>
+
+<span class="nc bnc" id="L136" title="All 2 branches missed.">            if (exitCode != 0) {</span>
+<span class="nc" id="L137">                logger.warning(&quot;Python недоступен через команду: &quot; + pythonExecutable);</span>
+<span class="nc" id="L138">                return false;</span>
+            }
+
+<span class="nc" id="L141">            return true;</span>
+<span class="nc" id="L142">        } catch (Exception e) {</span>
+<span class="nc" id="L143">            logger.log(Level.WARNING, &quot;Ошибка проверки доступности системы рекомендаций&quot;, e);</span>
+<span class="nc" id="L144">            return false;</span>
+        }
+    }
+
+    @Override
+    public void retrainModel() {
+<span class="nc" id="L150">        clearModelCache();</span>
+<span class="nc" id="L151">        logger.info(&quot;Кэш модели очищен. При следующем запросе рекомендаций модель будет переобучена.&quot;);</span>
+<span class="nc" id="L152">    }</span>
+
+    @Override
+    public void clearModelCache() {
+        try {
+<span class="nc" id="L157">            ProcessBuilder processBuilder = new ProcessBuilder(</span>
+                pythonExecutable, scriptPath, &quot;--clear_cache&quot;
+            );
+<span class="nc" id="L160">            processBuilder.redirectErrorStream(true);</span>
+<span class="nc" id="L161">            Process process = processBuilder.start();</span>
+<span class="nc" id="L162">            int exitCode = process.waitFor();</span>
+<span class="nc bnc" id="L163" title="All 2 branches missed.">            if (exitCode == 0) {</span>
+<span class="nc" id="L164">                logger.info(&quot;Кэш модели успешно очищен.&quot;);</span>
+            } else {
+<span class="nc" id="L166">                logger.warning(&quot;Ошибка при очистке кэша модели, код: &quot; + exitCode);</span>
+            }
+<span class="nc" id="L168">        } catch (Exception e) {</span>
+<span class="nc" id="L169">            logger.log(Level.SEVERE, &quot;Ошибка вызова очистки кэша Python-скрипта&quot;, e);</span>
+<span class="nc" id="L170">        }</span>
+<span class="nc" id="L171">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

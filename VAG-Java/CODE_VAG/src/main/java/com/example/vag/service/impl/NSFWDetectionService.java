@@ -15,6 +15,7 @@ import java.nio.FloatBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import static org.bytedeco.opencv.global.opencv_imgcodecs.imread;
@@ -34,6 +35,8 @@ public class NSFWDetectionService {
     private static final double PORN_THRESHOLD = 0.7;
     private static final double HENTAI_THRESHOLD = 0.7;
     private static final double SEXY_THRESHOLD = 0.8;
+    private static final double COMBINED_THRESHOLD = 1.2;
+    private static final String MODEL_INPUT_NAME = "input_1";
 
     public NSFWDetectionService(FileUploadUtil fileUploadUtil) {
         this.fileUploadUtil = fileUploadUtil;
@@ -91,36 +94,55 @@ public class NSFWDetectionService {
             System.out.println("NSFW модель недоступна, пропускаем проверку");
             return false;
         }
+        return analyze(file).isExplicit();
+    }
 
-        float[] inputData = preprocessImage(file);
+    /**
+     * Выполняет единый прогон модели и возвращает детализированный результат.
+     */
+    public NsfwAnalysisResult analyze(MultipartFile file) throws IOException, OrtException {
+        if (!isAvailable()) {
+            return new NsfwAnalysisResult(false, new LinkedHashMap<>());
+        }
+        float[] output = runInference(preprocessImage(file));
+        Map<String, Float> scores = mapScores(output);
+        boolean explicit = containsExplicit(scores);
+        return new NsfwAnalysisResult(explicit, scores);
+    }
+
+    private float[] runInference(float[] inputData) throws OrtException {
         long[] shape = {1, 299, 299, 3};
-        OnnxTensor inputTensor = OnnxTensor.createTensor(env, FloatBuffer.wrap(inputData), shape);
+        try (OnnxTensor inputTensor = OnnxTensor.createTensor(env, FloatBuffer.wrap(inputData), shape)) {
+            Map<String, OnnxTensor> inputs = new HashMap<>();
+            inputs.put(MODEL_INPUT_NAME, inputTensor);
+            try (OrtSession.Result result = session.run(inputs)) {
+                OnnxTensor outputTensor = (OnnxTensor) result.get(0);
+                float[] output = new float[CLASSES.length];
+                outputTensor.getFloatBuffer().get(output);
+                return output;
+            }
+        }
+    }
 
-        Map<String, OnnxTensor> inputs = new HashMap<>();
-        inputs.put("input_1", inputTensor);
-
-        OrtSession.Result result = session.run(inputs);
-        OnnxTensor outputTensor = (OnnxTensor) result.get(0);
-
-        float[] output = new float[CLASSES.length];
-        outputTensor.getFloatBuffer().get(output);
-
-        inputTensor.close();
-        result.close();
-
-        Map<String, Float> scores = new HashMap<>();
+    private Map<String, Float> mapScores(float[] output) {
+        Map<String, Float> scores = new LinkedHashMap<>();
         for (int i = 0; i < CLASSES.length; i++) {
             scores.put(CLASSES[i], output[i]);
         }
+        return scores;
+    }
+
+    private boolean containsExplicit(Map<String, Float> scores) {
+        Float porn = scores.getOrDefault("porn", 0.0f);
+        Float hentai = scores.getOrDefault("hentai", 0.0f);
+        Float sexy = scores.getOrDefault("sexy", 0.0f);
 
         System.out.println("📊 NSFW Scores: " + scores);
 
-        if (scores.get("porn") > PORN_THRESHOLD) return true;
-        if (scores.get("hentai") > HENTAI_THRESHOLD) return true;
-        if (scores.get("sexy") > SEXY_THRESHOLD) return true;
-        if (scores.get("porn") + scores.get("hentai") > 1.2) return true;
-
-        return false;
+        return porn > PORN_THRESHOLD
+                || hentai > HENTAI_THRESHOLD
+                || sexy > SEXY_THRESHOLD
+                || (porn + hentai) > COMBINED_THRESHOLD;
     }
 
     private float[] preprocessImage(MultipartFile file) throws IOException {
@@ -167,38 +189,46 @@ public class NSFWDetectionService {
         if (!isAvailable()) {
             return "NSFW модель недоступна";
         }
+        return buildReason(analyze(file).getScores());
+    }
 
-        float[] inputData = preprocessImage(file);
-        long[] shape = {1, 299, 299, 3};
-        OnnxTensor inputTensor = OnnxTensor.createTensor(env, FloatBuffer.wrap(inputData), shape);
+    public String getRejectionReason(Map<String, Float> scores) {
+        return buildReason(scores);
+    }
 
-        Map<String, OnnxTensor> inputs = new HashMap<>();
-        inputs.put("input_1", inputTensor);
-
-        OrtSession.Result result = session.run(inputs);
-        OnnxTensor outputTensor = (OnnxTensor) result.get(0);
-
-        float[] output = new float[CLASSES.length];
-        outputTensor.getFloatBuffer().get(output);
-        inputTensor.close();
-        result.close();
-
-        Map<String, Float> scores = new HashMap<>();
-        for (int i = 0; i < CLASSES.length; i++) {
-            scores.put(CLASSES[i], output[i]);
-        }
-
-        if (scores.get("porn") > 0.9) {
+    private String buildReason(Map<String, Float> scores) {
+        Float porn = scores.getOrDefault("porn", 0.0f);
+        Float hentai = scores.getOrDefault("hentai", 0.0f);
+        Float sexy = scores.getOrDefault("sexy", 0.0f);
+        if (porn > 0.9) {
             return "Обнаружен откровенный контент (высокая уверенность)";
-        } else if (scores.get("porn") > PORN_THRESHOLD) {
+        } else if (porn > PORN_THRESHOLD) {
             return "Обнаружен контент для взрослых";
-        } else if (scores.get("hentai") > 0.9) {
+        } else if (hentai > 0.9) {
             return "Обнаружен рисованный контент 18+ (высокая уверенность)";
-        } else if (scores.get("hentai") > HENTAI_THRESHOLD) {
+        } else if (hentai > HENTAI_THRESHOLD) {
             return "Обнаружен рисованный контент для взрослых";
-        } else if (scores.get("sexy") > SEXY_THRESHOLD) {
+        } else if (sexy > SEXY_THRESHOLD) {
             return "Обнаружен откровенный контент";
         }
         return "Обнаружен неподобающий контент";
+    }
+
+    public static class NsfwAnalysisResult {
+        private final boolean explicit;
+        private final Map<String, Float> scores;
+
+        public NsfwAnalysisResult(boolean explicit, Map<String, Float> scores) {
+            this.explicit = explicit;
+            this.scores = scores;
+        }
+
+        public boolean isExplicit() {
+            return explicit;
+        }
+
+        public Map<String, Float> getScores() {
+            return scores;
+        }
     }
 }

@@ -3,6 +3,8 @@ package com.example.vag.service.impl;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import okhttp3.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -15,84 +17,55 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class YandexVisionService {
+    private static final Logger log = LoggerFactory.getLogger(YandexVisionService.class);
+    private static final String VISION_URL = "https://vision.api.cloud.yandex.net/vision/v1/batchAnalyze";
+    private static final int MAX_RETRIES = 3;
+    private static final long RETRY_BASE_DELAY_MS = 300L;
+    private static final double ADULT_CONFIDENCE_THRESHOLD = 0.7;
+    private static final double VIOLENCE_CONFIDENCE_THRESHOLD = 0.85;
 
-    @Value("${yandex.api.key:}")
+    @Value("${YANDEX_API_KEY:${yandex.api.key:}}")
     private String apiKey;
 
-    @Value("${yandex.folder.id:}")
+    @Value("${YANDEX_FOLDER_ID:${yandex.folder.id:}}")
     private String folderId;
 
-    private final OkHttpClient httpClient = new OkHttpClient();
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private OkHttpClient httpClient = new OkHttpClient.Builder()
+            .connectTimeout(5, TimeUnit.SECONDS)
+            .readTimeout(10, TimeUnit.SECONDS)
+            .writeTimeout(10, TimeUnit.SECONDS)
+            .callTimeout(15, TimeUnit.SECONDS)
+            .build();
+    private ObjectMapper objectMapper = new ObjectMapper();
+    private String visionUrl = VISION_URL;
 
     /**
      * Проверяет изображение на наличие контента 18+ через Yandex Vision.
      */
     public boolean hasExplicitContent(MultipartFile file) throws IOException {
-        if (apiKey == null || apiKey.isEmpty() || folderId == null || folderId.isEmpty()) {
-            System.err.println("Yandex Vision не настроен. Пропускаем проверку.");
+        if (!isConfigured()) {
+            log.warn("Yandex Vision не настроен. Проверка пропущена.");
             return false;
         }
 
         try {
             String base64Image = encodeFileToBase64(file);
-
-            // Правильный JSON для moderation модели
             String requestBody = String.format(
                     "{\"folderId\":\"%s\",\"analyze_specs\":[{\"content\":\"%s\",\"features\":[{\"type\":\"CLASSIFICATION\",\"classificationConfig\":{\"model\":\"moderation\"}}]}]}",
                     folderId, base64Image
             );
 
-            System.out.println("📤 Отправка запроса в Yandex Vision...");
-
-            Request request = new Request.Builder()
-                    .url("https://vision.api.cloud.yandex.net/vision/v1/batchAnalyze")
-                    .post(RequestBody.create(requestBody, MediaType.parse("application/json")))
-                    .addHeader("Authorization", "Api-Key " + apiKey)
-                    .build();
-
-            try (Response response = httpClient.newCall(request).execute()) {
-                if (!response.isSuccessful()) {
-                    System.err.println("❌ Yandex Vision error: " + response.code());
-                    String errorBody = response.body() != null ? response.body().string() : "null";
-                    System.err.println("Response: " + errorBody);
-                    return false;
-                }
-
-                String body = response.body().string();
-                JsonNode root = objectMapper.readTree(body);
-
-                // Проверяем результаты классификации
-                JsonNode results = root.path("results");
-                if (results.isArray() && results.size() > 0) {
-                    JsonNode classification = results.get(0).path("results").get(0).path("classification");
-                    JsonNode properties = classification.path("properties");
-
-                    for (JsonNode prop : properties) {
-                        String name = prop.path("name").asText();
-                        double confidence = prop.path("confidence").asDouble();
-
-                        System.out.println("Yandex: " + name + " = " + String.format("%.2f", confidence));
-
-                        // Проверяем категории взрослого контента
-                        if (("adult".equals(name) || "adult_content".equals(name)) && confidence > 0.7) {
-                            System.out.println("Обнаружен взрослый контент!");
-                            return true;
-                        }
-                        if ("violence".equals(name) && confidence > 0.85) {
-                            System.out.println("Обнаружены сцены насилия (отправляем на модерацию)");
-                            // Можно вернуть true для блокировки или false для пропуска
-                        }
-                    }
-                }
-                System.out.println("Yandex Vision: контент OK");
+            JsonNode root = executeVisionRequestWithRetry(requestBody);
+            if (root == null) {
+                return false;
             }
+            return containsExplicitFromModeration(root);
         } catch (Exception e) {
-            System.err.println("Yandex Vision exception: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Ошибка при проверке Yandex Vision", e);
         }
         return false;
     }
@@ -103,7 +76,7 @@ public class YandexVisionService {
     public List<String> detectCategories(MultipartFile file) throws IOException {
         List<String> categories = new ArrayList<>();
 
-        if (apiKey == null || apiKey.isEmpty() || folderId == null || folderId.isEmpty()) {
+        if (!isConfigured()) {
             return categories;
         }
 
@@ -113,46 +86,123 @@ public class YandexVisionService {
                     "{\"folderId\":\"%s\",\"analyze_specs\":[{\"content\":\"%s\",\"features\":[{\"type\":\"LABEL_DETECTION\",\"maxResults\":10}]}]}",
                     folderId, base64Image
             );
+            JsonNode root = executeVisionRequestWithRetry(requestBody);
+            if (root == null) {
+                return categories;
+            }
+            JsonNode results = root.path("results");
+            if (results.isArray() && results.size() > 0) {
+                JsonNode labels = results.get(0).path("results").get(0).path("labelAnnotations");
+                for (JsonNode label : labels) {
+                    if (label.path("confidence").asDouble() > 0.5) {
+                        categories.add(label.path("description").asText());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("Ошибка при определении категорий через Yandex Vision", e);
+        }
+        return categories;
+    }
 
+    private boolean isConfigured() {
+        return apiKey != null && !apiKey.isBlank() && folderId != null && !folderId.isBlank();
+    }
+
+    private JsonNode executeVisionRequestWithRetry(String rawJsonBody) throws IOException {
+        IOException lastIoException = null;
+        for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
             Request request = new Request.Builder()
-                    .url("https://vision.api.cloud.yandex.net/vision/v1/batchAnalyze")
-                    .post(RequestBody.create(requestBody, MediaType.parse("application/json")))
+                    .url(visionUrl)
+                    .post(RequestBody.create(rawJsonBody, MediaType.parse("application/json")))
                     .addHeader("Authorization", "Api-Key " + apiKey)
                     .build();
 
             try (Response response = httpClient.newCall(request).execute()) {
                 if (response.isSuccessful()) {
-                    String body = response.body().string();
-                    JsonNode root = objectMapper.readTree(body);
-
-                    JsonNode results = root.path("results");
-                    if (results.isArray() && results.size() > 0) {
-                        JsonNode labels = results.get(0).path("results").get(0).path("labelAnnotations");
-                        for (JsonNode label : labels) {
-                            if (label.path("confidence").asDouble() > 0.5) {
-                                categories.add(label.path("description").asText());
-                            }
-                        }
+                    ResponseBody body = response.body();
+                    if (body == null) {
+                        log.warn("Yandex Vision вернул пустой ответ (attempt={})", attempt);
+                        return null;
                     }
+                    return objectMapper.readTree(body.string());
+                }
+
+                String errorBody = response.body() != null ? response.body().string() : "";
+                boolean shouldRetry = response.code() >= 500 || response.code() == 429;
+                log.warn("Yandex Vision HTTP {} (attempt={}): {}", response.code(), attempt, errorBody);
+                if (!shouldRetry || attempt == MAX_RETRIES) {
+                    return null;
+                }
+            } catch (IOException e) {
+                lastIoException = e;
+                log.warn("Сетевая ошибка Yandex Vision (attempt={}): {}", attempt, e.getMessage());
+                if (attempt == MAX_RETRIES) {
+                    break;
                 }
             }
-        } catch (Exception e) {
-            System.err.println("Yandex Vision categories error: " + e.getMessage());
+            sleepBeforeRetry(attempt);
         }
-        return categories;
+
+        if (lastIoException != null) {
+            throw lastIoException;
+        }
+        return null;
     }
+
+    private void sleepBeforeRetry(int attempt) {
+        try {
+            long delay = RETRY_BASE_DELAY_MS * (1L << (attempt - 1));
+            Thread.sleep(delay);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            log.warn("Ожидание повтора прервано");
+        }
+    }
+
+    private boolean containsExplicitFromModeration(JsonNode root) {
+        JsonNode results = root.path("results");
+        if (!results.isArray() || results.isEmpty()) {
+            return false;
+        }
+        JsonNode classification = results.get(0).path("results").get(0).path("classification");
+        JsonNode properties = classification.path("properties");
+        for (JsonNode prop : properties) {
+            String name = prop.path("name").asText();
+            double confidence = prop.path("confidence").asDouble();
+            log.debug("YandexVision: {}={}", name, confidence);
+            if (("adult".equals(name) || "adult_content".equals(name))
+                    && confidence > ADULT_CONFIDENCE_THRESHOLD) {
+                return true;
+            }
+            if ("violence".equals(name) && confidence > VIOLENCE_CONFIDENCE_THRESHOLD) {
+                log.info("Обнаружены сцены насилия (confidence={})", confidence);
+            }
+        }
+        return false;
+    }
+
+    void setHttpClientForTests(OkHttpClient httpClient) {
+        this.httpClient = httpClient;
+    }
+
+    void setObjectMapperForTests(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
+
+    void setVisionUrlForTests(String visionUrl) {
+        this.visionUrl = visionUrl;
+    }
+
     private byte[] compressImage(MultipartFile file) throws IOException {
-        // Читаем изображение
         BufferedImage image = ImageIO.read(file.getInputStream());
         if (image == null) {
             throw new IOException("Не удалось прочитать изображение");
         }
 
-        // Максимальные размеры
         int maxWidth = 1024;
         int maxHeight = 1024;
 
-        // Изменяем размер, если нужно
         int width = image.getWidth();
         int height = image.getHeight();
 
@@ -169,14 +219,12 @@ public class YandexVisionService {
             image = newImage;
         }
 
-        // Сохраняем в JPEG с качеством 70%
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         ImageIO.write(image, "jpg", baos);
         return baos.toByteArray();
     }
 
     private String encodeFileToBase64(MultipartFile file) throws IOException {
-        // Сжимаем перед кодированием
         byte[] compressedBytes = compressImage(file);
         return Base64.getEncoder().encodeToString(compressedBytes);
     }

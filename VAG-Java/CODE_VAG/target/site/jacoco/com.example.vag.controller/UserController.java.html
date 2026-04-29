@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ru"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">vag</a> &gt; <a href="index.source.html" class="el_package">com.example.vag.controller</a> &gt; <span class="el_source">UserController.java</span></div><h1>UserController.java</h1><pre class="source lang-java linenums">package com.example.vag.controller;
+
+import com.example.vag.model.Artwork;
+import com.example.vag.model.Exhibition;
+import com.example.vag.model.User;
+import com.example.vag.service.ArtworkService;
+import com.example.vag.service.NotificationService;
+import com.example.vag.service.UserService;
+import com.example.vag.validation.UpdateValidation;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+import com.example.vag.service.ExhibitionService;
+
+import java.util.List;
+import java.util.ArrayList;
+import java.util.stream.Collectors;
+
+@Controller
+@RequestMapping(&quot;/user&quot;)
+public class UserController {
+
+    private final UserService userService;
+    private final ArtworkService artworkService;
+    private final ExhibitionService exhibitionService;
+    private final NotificationService notificationService;
+
+    public UserController(UserService userService,
+                          ArtworkService artworkService,
+                          ExhibitionService exhibitionService,
+<span class="nc" id="L40">                          NotificationService notificationService) {</span>
+<span class="nc" id="L41">        this.userService = userService;</span>
+<span class="nc" id="L42">        this.artworkService = artworkService;</span>
+<span class="nc" id="L43">        this.exhibitionService = exhibitionService;</span>
+<span class="nc" id="L44">        this.notificationService = notificationService;</span>
+<span class="nc" id="L45">    }</span>
+
+    @GetMapping(&quot;/profile&quot;)
+    @Transactional(readOnly = true)
+    public String showProfile(Model model) {
+<span class="nc" id="L50">        User user = userService.getCurrentUser();</span>
+<span class="nc" id="L51">        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();</span>
+<span class="nc bnc" id="L52" title="All 4 branches missed.">        boolean isOwnProfile = authentication != null &amp;&amp; authentication.getName().equals(user.getUsername());</span>
+
+        List&lt;Artwork&gt; artworks;
+<span class="nc bnc" id="L55" title="All 2 branches missed.">        if (isOwnProfile) {</span>
+<span class="nc" id="L56">            artworks = artworkService.findByUserWithDetails(user);</span>
+        } else {
+<span class="nc" id="L58">            artworks = artworkService.findByUserWithDetails(user).stream()</span>
+<span class="nc" id="L59">                .filter(artwork -&gt; &quot;APPROVED&quot;.equals(artwork.getStatus()))</span>
+<span class="nc" id="L60">                .collect(Collectors.toList());</span>
+        }
+
+<span class="nc" id="L63">        List&lt;Exhibition&gt; exhibitions = exhibitionService.findByUser(user);</span>
+<span class="nc" id="L64">        exhibitions.forEach(exhibition -&gt; {</span>
+<span class="nc" id="L65">            exhibition.getUser().getUsername();</span>
+<span class="nc bnc" id="L66" title="All 2 branches missed.">            if (!exhibition.getArtworks().isEmpty()) {</span>
+<span class="nc" id="L67">                exhibition.getArtworks().forEach(artwork -&gt; {</span>
+<span class="nc" id="L68">                    artwork.getStatus();</span>
+<span class="nc" id="L69">                });</span>
+            }
+<span class="nc" id="L71">        });</span>
+
+<span class="nc" id="L73">        model.addAttribute(&quot;user&quot;, user);</span>
+<span class="nc" id="L74">        model.addAttribute(&quot;artworks&quot;, artworks);</span>
+<span class="nc" id="L75">        model.addAttribute(&quot;exhibitions&quot;, exhibitions);</span>
+<span class="nc" id="L76">        model.addAttribute(&quot;isOwnProfile&quot;, isOwnProfile);</span>
+<span class="nc" id="L77">        return &quot;user/profile&quot;;</span>
+    }
+
+    @GetMapping(&quot;/profile/{id}&quot;)
+    @Transactional(readOnly = true)
+    public String showUserProfile(@PathVariable Long id, Model model) {
+<span class="nc" id="L83">        User user = userService.findById(id).orElseThrow();</span>
+<span class="nc" id="L84">        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();</span>
+<span class="nc bnc" id="L85" title="All 4 branches missed.">        boolean isOwnProfile = authentication != null &amp;&amp; authentication.getName().equals(user.getUsername());</span>
+
+        List&lt;Artwork&gt; artworks;
+<span class="nc bnc" id="L88" title="All 2 branches missed.">        if (isOwnProfile) {</span>
+<span class="nc" id="L89">            artworks = artworkService.findByUserWithDetails(user);</span>
+        } else {
+<span class="nc" id="L91">            artworks = artworkService.findByUserWithDetails(user).stream()</span>
+<span class="nc" id="L92">                .filter(artwork -&gt; &quot;APPROVED&quot;.equals(artwork.getStatus()))</span>
+<span class="nc" id="L93">                .collect(Collectors.toList());</span>
+        }
+
+<span class="nc" id="L96">        List&lt;Exhibition&gt; exhibitions = exhibitionService.findByUser(user);</span>
+<span class="nc" id="L97">        exhibitions.forEach(exhibition -&gt; {</span>
+<span class="nc" id="L98">            exhibition.getUser().getUsername();</span>
+<span class="nc bnc" id="L99" title="All 2 branches missed.">            if (!exhibition.getArtworks().isEmpty()) {</span>
+<span class="nc" id="L100">                exhibition.getArtworks().forEach(artwork -&gt; {</span>
+<span class="nc" id="L101">                    artwork.getStatus();</span>
+<span class="nc" id="L102">                });</span>
+            }
+<span class="nc" id="L104">        });</span>
+
+<span class="nc" id="L106">        model.addAttribute(&quot;user&quot;, user);</span>
+<span class="nc" id="L107">        model.addAttribute(&quot;artworks&quot;, artworks);</span>
+<span class="nc" id="L108">        model.addAttribute(&quot;exhibitions&quot;, exhibitions);</span>
+<span class="nc" id="L109">        model.addAttribute(&quot;isOwnProfile&quot;, isOwnProfile);</span>
+<span class="nc bnc" id="L110" title="All 2 branches missed.">        model.addAttribute(&quot;isAuthenticated&quot;, authentication != null);</span>
+<span class="nc" id="L111">        return &quot;user/profile&quot;;</span>
+    }
+
+    @GetMapping(&quot;/settings&quot;)
+    public String showSettings(Model model) {
+<span class="nc" id="L116">        User user = userService.getCurrentUser();</span>
+<span class="nc" id="L117">        model.addAttribute(&quot;user&quot;, user);</span>
+<span class="nc" id="L118">        return &quot;user/settings&quot;;</span>
+    }
+
+    @PostMapping(&quot;/settings&quot;)
+    public String updateSettings(@Validated(UpdateValidation.class) @ModelAttribute(&quot;user&quot;) User user,
+                                 BindingResult bindingResult, Model model) {
+<span class="nc bnc" id="L124" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L125">            return &quot;user/settings&quot;;</span>
+        }
+
+<span class="nc" id="L128">        User currentUser = userService.getCurrentUser();</span>
+
+<span class="nc bnc" id="L130" title="All 2 branches missed.">        if (!user.getUsername().equals(currentUser.getUsername())) {</span>
+<span class="nc bnc" id="L131" title="All 2 branches missed.">            if (userService.findByUsername(user.getUsername()).isPresent()) {</span>
+<span class="nc" id="L132">                bindingResult.rejectValue(&quot;username&quot;, &quot;error.user&quot;, &quot;Пользователь с таким именем уже существует&quot;);</span>
+<span class="nc" id="L133">                return &quot;user/settings&quot;;</span>
+            }
+        }
+
+<span class="nc bnc" id="L137" title="All 2 branches missed.">        if (!user.getEmail().equals(currentUser.getEmail())) {</span>
+<span class="nc bnc" id="L138" title="All 2 branches missed.">            if (userService.findByEmail(user.getEmail()).isPresent()) {</span>
+<span class="nc" id="L139">                bindingResult.rejectValue(&quot;email&quot;, &quot;error.user&quot;, &quot;Пользователь с таким email уже существует&quot;);</span>
+<span class="nc" id="L140">                return &quot;user/settings&quot;;</span>
+            }
+        }
+
+<span class="nc bnc" id="L144" title="All 4 branches missed.">        if (user.getPassword() != null &amp;&amp; !user.getPassword().isEmpty()) {</span>
+<span class="nc bnc" id="L145" title="All 2 branches missed.">            if (!user.getPassword().equals(user.getConfirmPassword())) {</span>
+<span class="nc" id="L146">                bindingResult.rejectValue(&quot;confirmPassword&quot;, &quot;error.user&quot;, &quot;Пароли не совпадают&quot;);</span>
+<span class="nc" id="L147">                return &quot;user/settings&quot;;</span>
+            }
+        }
+
+<span class="nc" id="L151">        userService.update(user);</span>
+
+<span class="nc bnc" id="L153" title="All 2 branches missed.">        if (!user.getUsername().equals(currentUser.getUsername())) {</span>
+<span class="nc" id="L154">            SecurityContextHolder.getContext().setAuthentication(null);</span>
+        }
+
+<span class="nc" id="L157">        return &quot;redirect:/user/profile?updated&quot;;</span>
+    }
+
+    @GetMapping(&quot;/liked&quot;)
+    public String likedArtworks(
+            @RequestParam(defaultValue = &quot;0&quot;) int page,
+            @RequestParam(defaultValue = &quot;12&quot;) int size,
+            Model model) {
+
+<span class="nc" id="L166">        User user = userService.getCurrentUser();</span>
+<span class="nc" id="L167">        Pageable pageable = PageRequest.of(page, size);</span>
+<span class="nc" id="L168">        Page&lt;Artwork&gt; artworkPage = artworkService.findLikedArtworks(user, pageable);</span>
+
+<span class="nc" id="L170">        model.addAttribute(&quot;artworks&quot;, artworkPage);</span>
+<span class="nc" id="L171">        return &quot;user/liked&quot;;</span>
+    }
+
+    @GetMapping(&quot;/notifications&quot;)
+    public String notifications(
+            @RequestParam(defaultValue = &quot;0&quot;) int page,
+            @RequestParam(defaultValue = &quot;10&quot;) int size,
+            Model model) {
+<span class="nc" id="L179">        User user = userService.getCurrentUser();</span>
+<span class="nc" id="L180">        notificationService.markAllAsRead(user);</span>
+
+<span class="nc" id="L182">        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, &quot;createdAt&quot;));</span>
+<span class="nc" id="L183">        model.addAttribute(&quot;notifications&quot;, notificationService.findAll(user, pageable));</span>
+<span class="nc" id="L184">        return &quot;user/notifications&quot;;</span>
+    }
+
+    @RequestMapping(value = &quot;/notifications/mark-read&quot;, method = {RequestMethod.GET, RequestMethod.POST})
+    @ResponseBody
+    public void markNotificationsRead() {
+<span class="nc" id="L190">        User user = userService.getCurrentUser();</span>
+<span class="nc bnc" id="L191" title="All 2 branches missed.">        if (user != null) {</span>
+<span class="nc" id="L192">            notificationService.markAllAsRead(user);</span>
+        }
+<span class="nc" id="L194">    }</span>
+
+    @PostMapping(&quot;/notifications/delete/{id}&quot;)
+    public String deleteNotification(@PathVariable(&quot;id&quot;) Long notificationId,
+                                     @RequestParam(defaultValue = &quot;0&quot;) int page,
+                                     @RequestParam(defaultValue = &quot;10&quot;) int size) {
+<span class="nc" id="L200">        User user = userService.getCurrentUser();</span>
+<span class="nc" id="L201">        notificationService.deleteForUser(user, notificationId);</span>
+<span class="nc" id="L202">        return &quot;redirect:/user/notifications?page=&quot; + page + &quot;&amp;size=&quot; + size;</span>
+    }
+
+    @PostMapping(&quot;/notifications/delete&quot;)
+    public String deleteNotifications(@RequestParam(defaultValue = &quot;0&quot;) int page,
+                                      @RequestParam(defaultValue = &quot;10&quot;) int size,
+                                      @RequestParam(value = &quot;selectedIds&quot;, required = false) List&lt;Long&gt; selectedIds,
+                                      @RequestParam(value = &quot;deleteAll&quot;, defaultValue = &quot;false&quot;) boolean deleteAll,
+                                      Model model) {
+<span class="nc" id="L211">        User user = userService.getCurrentUser();</span>
+
+<span class="nc bnc" id="L213" title="All 2 branches missed.">        if (deleteAll) {</span>
+<span class="nc" id="L214">            Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, &quot;createdAt&quot;));</span>
+<span class="nc" id="L215">            Page&lt;com.example.vag.model.Notification&gt; notificationsPage = notificationService.findAll(user, pageable);</span>
+<span class="nc" id="L216">            List&lt;Long&gt; idsOnPage = notificationsPage.getContent().stream()</span>
+<span class="nc" id="L217">                    .map(com.example.vag.model.Notification::getId)</span>
+<span class="nc" id="L218">                    .collect(Collectors.toList());</span>
+<span class="nc" id="L219">            notificationService.deleteForUser(user, idsOnPage);</span>
+<span class="nc" id="L220">        } else {</span>
+<span class="nc bnc" id="L221" title="All 2 branches missed.">            notificationService.deleteForUser(user, selectedIds == null ? new ArrayList&lt;&gt;() : selectedIds);</span>
+        }
+
+<span class="nc" id="L224">        return &quot;redirect:/user/notifications?page=&quot; + page + &quot;&amp;size=&quot; + size;</span>
+    }
+
+    @GetMapping(&quot;/list&quot;)
+    @Transactional(readOnly = true)
+    public String listUsers(
+            Model model,
+            @RequestParam(defaultValue = &quot;0&quot;) int page,
+            @RequestParam(defaultValue = &quot;12&quot;) int size) {
+
+<span class="nc" id="L234">        Pageable pageable = PageRequest.of(page, size, Sort.by(&quot;username&quot;));</span>
+<span class="nc" id="L235">        Page&lt;User&gt; userPage = userService.findAll(pageable);</span>
+
+<span class="nc" id="L237">        userPage.getContent().forEach(user -&gt; {</span>
+<span class="nc" id="L238">            user.getArtworks().size();</span>
+<span class="nc" id="L239">            user.getExhibitions().size();</span>
+<span class="nc" id="L240">        });</span>
+
+<span class="nc" id="L242">        model.addAttribute(&quot;users&quot;, userPage);</span>
+<span class="nc" id="L243">        return &quot;user/list&quot;;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

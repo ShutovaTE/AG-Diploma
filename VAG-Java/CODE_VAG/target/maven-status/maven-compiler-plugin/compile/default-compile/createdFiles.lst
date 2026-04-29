@@ -36,6 +36,7 @@ com\example\vag\repository\CategoryRepository.class
 com\example\vag\repository\ImageHashRepository.class
 com\example\vag\service\impl\ExhibitionServiceImpl.class
 com\example\vag\service\impl\ModerationServiceImpl.class
+com\example\vag\service\impl\NSFWDetectionService$NsfwAnalysisResult.class
 com\example\vag\controller\AuthController.class
 com\example\vag\recommendation\controller\RecommendationController.class
 com\example\vag\model\Role$RoleName.class
