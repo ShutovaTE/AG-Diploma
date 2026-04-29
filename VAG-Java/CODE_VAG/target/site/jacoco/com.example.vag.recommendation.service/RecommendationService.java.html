@@ -29,7 +29,7 @@ public interface RecommendationService {
      * @return список рекомендованных работ
      */
     default List&lt;RecommendationDTO&gt; getRecommendationsForUser(Long userId) {
-<span class="nc" id="L32">        return getRecommendationsForUser(userId, 10);</span>
+<span class="fc" id="L32">        return getRecommendationsForUser(userId, 10);</span>
     }
     
     /**

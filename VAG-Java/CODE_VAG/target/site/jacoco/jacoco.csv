@@ -43,5 +43,5 @@ vag,com.example.vag.service.impl,CategoryServiceImpl,84,0,0,0,20,0,13,0,13,0
 vag,com.example.vag.service.impl,NSFWDetectionService,351,113,24,12,73,22,21,11,8,6
 vag,com.example.vag.service.impl,NSFWDetectionService.NsfwAnalysisResult,0,15,0,0,0,6,0,3,0,3
 vag,com.example.vag.recommendation.dto,RecommendationDTO,66,0,0,0,28,0,14,0,14,0
-vag,com.example.vag.recommendation.service,RecommendationService,5,0,0,0,1,0,1,0,1,0
-vag,com.example.vag.recommendation.service,RecommendationServiceImpl,405,0,32,0,87,0,25,0,9,0
+vag,com.example.vag.recommendation.service,RecommendationService,0,5,0,0,0,1,0,1,0,1
+vag,com.example.vag.recommendation.service,RecommendationServiceImpl,358,47,30,2,73,14,21,4,5,4
