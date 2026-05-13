@@ -1,0 +1,22 @@
+{
+  "version": "2.0",
+  "training_date": "2026-05-14T00:19:53.234467",
+  "training_duration_seconds": 0.24771714210510254,
+  "data_statistics": {
+    "artworks_count": 50,
+    "likes_count": 39,
+    "comments_count": 0
+  },
+  "model_quality": {
+    "precision_at_5": 0.3333333333333333,
+    "recall_at_5": 1.0,
+    "coverage_at_5": 0.18
+  },
+  "training_parameters": {
+    "n_factors": 10,
+    "learning_rate": 0.005,
+    "regularization": 0.02,
+    "n_epochs": 20,
+    "alpha_hybrid": 0.6
+  }
+}

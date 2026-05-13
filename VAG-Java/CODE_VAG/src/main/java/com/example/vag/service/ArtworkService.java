@@ -40,5 +40,10 @@ public interface ArtworkService {
     List<Artwork> findLikedArtworks(User user);
     Page<Artwork> findLikedArtworks(User user, Pageable pageable);
     Page<Artwork> findByExhibitionId(Long exhibitionId, Pageable pageable);
+    Page<Artwork> findPaginatedApprovedArtworksByLikes(Pageable pageable);
+    Page<Artwork> findPaginatedApprovedArtworksByDate(Pageable pageable);
+    List<com.example.vag.recommendation.dto.RecommendationDTO> getRecommendationsForUser(Long userId);
     Page<Artwork> findAllPaginated(Pageable pageable);
+
+    Page<Artwork> searchArtworksByTitle(String title, Pageable pageable);
 }

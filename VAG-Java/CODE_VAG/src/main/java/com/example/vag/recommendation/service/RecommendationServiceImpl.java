@@ -8,12 +8,20 @@ import java.io.File;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
+/**
+ * Реализация сервиса рекомендаций.
+ * 
+ * Обеспечивает:
+ * - Получение рекомендаций с обучением модели (старый режим, для обратной совместимости)
+ * - Получение расширённого списка рекомендаций из готовой модели (новый режим)
+ * - Рандомизированный выбор 12 из ТОП-50 при каждом запросе (Pinterest-подход)
+ * - Проверку доступности системы рекомендаций
+ */
 public class RecommendationServiceImpl implements RecommendationService {
 
     private static final Logger logger = Logger.getLogger(RecommendationServiceImpl.class.getName());
@@ -21,16 +29,30 @@ public class RecommendationServiceImpl implements RecommendationService {
     private final String pythonExecutable;
     private final String scriptPath;
     private final ObjectMapper objectMapper;
+    private final ModelManagementService modelManagementService;
+
+    // === КОНСТАНТЫ ===
+    private static final int TOP_N_FROM_MODEL = 50;  // Получаем ТОП-50 из Python
+    private static final int FINAL_RECOMMENDATIONS_COUNT = 12;  // Показываем 12 пользователю
+    private static final Random random = new Random();
+
+    // === КОНСТРУКТОРЫ ===
 
     public RecommendationServiceImpl() {
-        this("python", getDefaultScriptPath());
+        this("python", getDefaultScriptPath(), null);
     }
 
     public RecommendationServiceImpl(String pythonExecutable, String scriptPath) {
+        this(pythonExecutable, scriptPath, null);
+    }
+
+    public RecommendationServiceImpl(String pythonExecutable, String scriptPath, 
+                                     ModelManagementService modelManagementService) {
         this.pythonExecutable = pythonExecutable;
         this.scriptPath = scriptPath;
+        this.modelManagementService = modelManagementService;
         this.objectMapper = new ObjectMapper();
-        logger.info("RecommendationService initialized with script: " + scriptPath);
+        logger.info("RecommendationService инициализирован с скриптом: " + scriptPath);
     }
 
     private static String getDefaultScriptPath() {
@@ -38,19 +60,95 @@ public class RecommendationServiceImpl implements RecommendationService {
         return Paths.get(projectRoot, "..", "ML-Recommendation", "recommendation_engine.py").toString();
     }
 
+    // === ОСНОВНЫЕ МЕТОДЫ ===
+
+    /**
+     * Получение рекомендаций для пользователя (новый режим).
+     * 
+     * Алгоритм:
+     * 1. Загружает ТОП-50 релевантных работ из готовой модели
+     * 2. Случайно выбирает 12 из них
+     * 3. Сортирует выбранные 12 по релевантности (скорам)
+     * 
+     * При каждом обновлении страницы пользователь видит разные рекомендации!
+     */
     @Override
     public List<RecommendationDTO> getRecommendationsForUser(Long userId, int topN) {
+        // Используем новый режим расширенного получения рекомендаций
+        return getRecommendationsForUserExtended(userId, topN);
+    }
+
+    /**
+     * Получение расширённого списка рекомендаций (ТОП-50) с рандомизацией.
+     * 
+     * Это основной метод для получения рекомендаций при обновлении страницы.
+     * 
+     * Параметры:
+     *     userId: ID пользователя
+     *     topN: Сколько рекомендаций показать (по умолчанию 12)
+     * 
+     * Возвращает:
+     *     Список из N рекомендаций, отсортированный по релевантности
+     */
+    public List<RecommendationDTO> getRecommendationsForUserExtended(Long userId, int topN) {
+        if (topN <= 0) {
+            topN = FINAL_RECOMMENDATIONS_COUNT;
+        }
+
+        // === Проверка готовности модели ===
+        if (modelManagementService != null && !modelManagementService.isModelReady()) {
+            logger.warning("Модель рекомендаций не готова. Пользователь: " + userId);
+            return Collections.emptyList();
+        }
+
         if (!isRecommendationSystemAvailable()) {
-            logger.warning("Система рекомендаций недоступна. Возвращается пустой список.");
+            logger.warning("Система рекомендаций недоступна. Пользователь: " + userId);
             return Collections.emptyList();
         }
 
         try {
+            // === ШАГ 1: Получение ТОП-50 из Python ===
+            List<RecommendationDTO> allRecommendations = getRecommendationsFromPythonExtended(userId);
+
+            if (allRecommendations.isEmpty()) {
+                logger.warning("Не получено рекомендаций из Python для пользователя: " + userId);
+                return Collections.emptyList();
+            }
+
+            logger.info("Получено " + allRecommendations.size() + " рекомендаций для пользователя " + userId);
+
+            // === ШАГ 2: Рандомный выбор topN из всех рекомендаций ===
+            List<RecommendationDTO> randomized = selectRandomRecommendations(allRecommendations, topN);
+
+            // === ШАГ 3: Сортировка выбранных по скорам (релевантности) ===
+            randomized.sort((r1, r2) -> Double.compare(r2.getScore(), r1.getScore()));
+
+            logger.info("Возвращено " + randomized.size() + " рандомизированных рекомендаций для пользователя " + userId);
+            return randomized;
+
+        } catch (Exception e) {
+            logger.log(Level.SEVERE, "Ошибка при получении рекомендаций для пользователя " + userId, e);
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * Вызов Python скрипта с флагом --extended для получения ТОП-50.
+     * 
+     * Эта функция загружает готовую модель, не переучивает её.
+     */
+    private List<RecommendationDTO> getRecommendationsFromPythonExtended(Long userId) {
+        try {
+            // === Запуск Python скрипта в режиме --extended ===
             ProcessBuilder processBuilder = new ProcessBuilder(
-                pythonExecutable, scriptPath, "--user_id", userId.toString()
+                    pythonExecutable,
+                    scriptPath,
+                    "--user_id", userId.toString(),
+                    "--extended"
             );
             processBuilder.environment().put("PYTHONIOENCODING", "utf-8");
             processBuilder.redirectErrorStream(true);
+
             Process process = processBuilder.start();
 
             StringBuilder output = new StringBuilder();
@@ -64,23 +162,43 @@ public class RecommendationServiceImpl implements RecommendationService {
 
             int exitCode = process.waitFor();
             if (exitCode != 0) {
-                logger.severe("Python-скрипт завершился с кодом " + exitCode +
-                              ". Вывод: " + output.toString());
+                logger.severe("Python-скрипт завершился с кодом ошибки " + exitCode);
                 return Collections.emptyList();
             }
 
             return parseRecommendations(output.toString());
 
         } catch (Exception e) {
-            logger.log(Level.SEVERE, "Ошибка вызова Python-скрипта рекомендаций", e);
+            logger.log(Level.SEVERE, "Ошибка вызова Python-скрипта рекомендаций (extended)", e);
             return Collections.emptyList();
         }
     }
 
+    /**
+     * Рандомный выбор N рекомендаций из полного списка.
+     * 
+     * Если в списке меньше N элементов, возвращаются все.
+     */
+    private List<RecommendationDTO> selectRandomRecommendations(List<RecommendationDTO> allRecs, int n) {
+        if (allRecs.size() <= n) {
+            return new ArrayList<>(allRecs);
+        }
+
+        // Используем Fisher-Yates shuffle для выбора N случайных элементов
+        List<RecommendationDTO> shuffled = new ArrayList<>(allRecs);
+        Collections.shuffle(shuffled, random);
+        return shuffled.stream()
+                .limit(n)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Парсинг JSON-ответа Python скрипта в список DTO.
+     */
     @SuppressWarnings("unchecked")
     private List<RecommendationDTO> parseRecommendations(String jsonOutput) {
         try {
-            // Удаляем возможные предупреждения в начале (на всякий случай)
+            // === Удаление возможных предупреждений перед JSON ===
             int jsonStart = jsonOutput.indexOf('{');
             if (jsonStart > 0) {
                 jsonOutput = jsonOutput.substring(jsonStart);
@@ -88,8 +206,15 @@ public class RecommendationServiceImpl implements RecommendationService {
 
             var rootNode = objectMapper.readTree(jsonOutput);
 
+            // === Проверка на ошибки ===
             if (rootNode.has("error")) {
                 logger.warning("Python-скрипт вернул ошибку: " + rootNode.get("error").asText());
+                return Collections.emptyList();
+            }
+
+            if (rootNode.has("success") && !rootNode.get("success").asBoolean()) {
+                String errorMsg = rootNode.has("error") ? rootNode.get("error").asText() : "unknown";
+                logger.warning("Python-скрипт вернул success=false. Ошибка: " + errorMsg);
                 return Collections.emptyList();
             }
 
@@ -98,6 +223,7 @@ public class RecommendationServiceImpl implements RecommendationService {
                 return Collections.emptyList();
             }
 
+            // === Парсинг рекомендаций ===
             var recommendationsNode = rootNode.get("recommendations");
             List<RecommendationDTO> recommendations = new ArrayList<>();
 
@@ -120,15 +246,20 @@ public class RecommendationServiceImpl implements RecommendationService {
         }
     }
 
+    /**
+     * Проверка доступности системы рекомендаций.
+     */
     @Override
     public boolean isRecommendationSystemAvailable() {
         try {
+            // === Проверка наличия Python скрипта ===
             File scriptFile = new File(scriptPath);
             if (!scriptFile.exists()) {
-                logger.warning("Скрипт рекомендаций не найден: " + scriptPath);
+                logger.warning("Python скрипт не найден: " + scriptPath);
                 return false;
             }
 
+            // === Проверка доступности Python интерпретатора ===
             ProcessBuilder checkProcess = new ProcessBuilder(pythonExecutable, "--version");
             Process process = checkProcess.start();
             int exitCode = process.waitFor();
@@ -145,28 +276,26 @@ public class RecommendationServiceImpl implements RecommendationService {
         }
     }
 
+    /**
+     * Переобучение модели (старый метод для совместимости).
+     * Теперь делегирует к ModelManagementService.
+     */
     @Override
     public void retrainModel() {
-        clearModelCache();
-        logger.info("Кэш модели очищен. При следующем запросе рекомендаций модель будет переобучена.");
+        if (modelManagementService != null) {
+            logger.info("Запуск переобучения модели через ModelManagementService");
+            modelManagementService.retrainModel();
+        } else {
+            logger.warning("ModelManagementService не инициализирован, переобучение невозможно");
+        }
     }
 
+    /**
+     * Очистка кэша модели (старый метод для совместимости).
+     */
     @Override
     public void clearModelCache() {
-        try {
-            ProcessBuilder processBuilder = new ProcessBuilder(
-                pythonExecutable, scriptPath, "--clear_cache"
-            );
-            processBuilder.redirectErrorStream(true);
-            Process process = processBuilder.start();
-            int exitCode = process.waitFor();
-            if (exitCode == 0) {
-                logger.info("Кэш модели успешно очищен.");
-            } else {
-                logger.warning("Ошибка при очистке кэша модели, код: " + exitCode);
-            }
-        } catch (Exception e) {
-            logger.log(Level.SEVERE, "Ошибка вызова очистки кэша Python-скрипта", e);
-        }
+        logger.info("clearModelCache вызван. Данный метод устарел, используйте ModelManagementService");
+        retrainModel();
     }
 }

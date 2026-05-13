@@ -4,7 +4,7 @@ vag,com.example.vag.dto,PresignedUploadResult,27,0,0,0,10,0,5,0,5,0
 vag,com.example.vag.dto,ModerationResult,10,68,0,0,3,19,3,18,3,18
 vag,com.example.vag.controller,AdminController.new MultipartFile() {...},76,0,7,0,14,0,13,0,9,0
 vag,com.example.vag.controller,ExhibitionController,533,0,38,0,112,0,35,0,16,0
-vag,com.example.vag.controller,ArtworkController,877,0,94,0,196,0,63,0,16,0
+vag,com.example.vag.controller,ArtworkController,1014,0,106,0,226,0,71,0,17,0
 vag,com.example.vag.controller,CategoryController,65,0,0,0,16,0,4,0,4,0
 vag,com.example.vag.controller,GlobalModelAttributes,63,0,12,0,19,0,10,0,4,0
 vag,com.example.vag.controller,HomeController,153,0,8,0,42,0,10,0,6,0
@@ -27,10 +27,10 @@ vag,com.example.vag.model,ImageHash,56,0,0,0,13,0,12,0,12,0
 vag,com.example.vag.model,Notification,64,0,0,0,14,0,16,0,16,0
 vag,com.example.vag.model,Comment,238,0,46,0,19,0,38,0,15,0
 vag,com.example.vag.model,Exhibition,309,0,58,0,27,0,52,0,23,0
-vag,com.example.vag.model,Artwork,717,0,132,0,67,0,115,0,49,0
+vag,com.example.vag.model,Artwork,755,0,140,0,70,0,121,0,51,0
 vag,com.example.vag.model,User,488,0,90,0,43,0,76,0,31,0
-vag,com.example.vag.recommendation.controller,RecommendationController,203,0,6,0,49,0,10,0,7,0
-vag,com.example.vag.service.impl,ArtworkServiceImpl,812,0,48,0,193,0,66,0,42,0
+vag,com.example.vag.recommendation.controller,RecommendationController,412,0,14,0,95,0,16,0,9,0
+vag,com.example.vag.service.impl,ArtworkServiceImpl,834,0,48,0,197,0,70,0,46,0
 vag,com.example.vag.service.impl,ExhibitionServiceImpl,145,0,2,0,28,0,19,0,18,0
 vag,com.example.vag.service.impl,ImageHashService,214,0,18,0,59,0,20,0,11,0
 vag,com.example.vag.service.impl,UserServiceImpl,148,0,12,0,32,0,20,0,14,0
@@ -42,6 +42,10 @@ vag,com.example.vag.service.impl,UserDetailsServiceImpl,61,0,6,0,15,0,7,0,4,0
 vag,com.example.vag.service.impl,CategoryServiceImpl,84,0,0,0,20,0,13,0,13,0
 vag,com.example.vag.service.impl,NSFWDetectionService,351,113,24,12,73,22,21,11,8,6
 vag,com.example.vag.service.impl,NSFWDetectionService.NsfwAnalysisResult,0,15,0,0,0,6,0,3,0,3
-vag,com.example.vag.recommendation.dto,RecommendationDTO,66,0,0,0,28,0,14,0,14,0
+vag,com.example.vag.recommendation.service,ModelManagementService,557,0,24,0,124,0,26,0,14,0
 vag,com.example.vag.recommendation.service,RecommendationService,0,5,0,0,0,1,0,1,0,1
-vag,com.example.vag.recommendation.service,RecommendationServiceImpl,358,47,30,2,73,14,21,4,5,4
+vag,com.example.vag.recommendation.service,RecommendationServiceImpl,444,71,44,4,92,21,32,6,8,6
+vag,com.example.vag.recommendation.service,ModelManagementService.TrainingStatus,42,0,0,0,9,0,3,0,3,0
+vag,com.example.vag.recommendation.config,RecommendationInitializer,46,0,2,0,19,0,4,0,3,0
+vag,com.example.vag.recommendation.dto,RecommendationDTO,66,0,0,0,28,0,14,0,14,0
+vag,com.example.vag.recommendation.dto,TrainingStatusDTO,132,0,0,0,37,0,19,0,19,0

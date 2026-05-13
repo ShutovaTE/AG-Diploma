@@ -9,14 +9,55 @@
 <div th:replace="fragments/header :: header"></div>
 
 <div class="container">
-    <h1>Публикации</h1>
+    <h1 th:if="${mode == 'popular'}">Популярные публикации</h1>
+    <h1 th:if="${mode == 'new'}">Новые публикации</h1>
+    <h1 th:if="${mode == 'recommendations'}">Рекомендации</h1>
+    <h1 th:if="${mode == null or mode == ''}">Публикации</h1>
 
     <div sec:authorize="isAuthenticated()" class="create-artwork-btn">
         <a th:href="@{/artwork/create}" class="btn btn-primary">Создать новую публикацию</a>
     </div>
 
+    <!-- Переключатель режимов -->
+    <div class="mode-selector">
+        <a th:href="@{/artwork/list(mode='popular')}"
+           th:classappend="${mode == 'popular'} ? 'active' : ''"
+           class="mode-btn">Популярное</a>
+        <a th:href="@{/artwork/list(mode='new')}"
+           th:classappend="${mode == 'new'} ? 'active' : ''"
+           class="mode-btn">Новое</a>
+        <a sec:authorize="isAuthenticated()"
+           th:href="@{/artwork/list(mode='recommendations')}"
+           th:classappend="${mode == 'recommendations'} ? 'active' : ''"
+           class="mode-btn">Рекомендации</a>
+    </div>
+
     <div class="artwork-grid">
-        <div th:each="artwork : ${artworks.content}" class="artwork-card">
+        <!-- Режим рекомендаций -->
+        <div th:if="${mode == 'recommendations' and recommendations != null}" th:each="recommendation : ${recommendations}" class="artwork-card">
+            <a th:href="@{/artwork/details/{id}(id=${recommendation.id})}">
+                <img th:src="@{'/uploads/' + ${#strings.replace(recommendation.imagePath, ' ', '%20')}}"/>
+                <h3 th:text="${recommendation.title}"></h3>
+            </a>
+            <p>Автор:
+                <span th:if="${recommendation.user != null}"
+                      th:text="${recommendation.user.username}">
+                </span>
+            </p>
+            <p th:if="${recommendation.categories != null and !recommendation.categories.isEmpty()}">
+                Категории:
+                <span th:each="category, iterStat : ${recommendation.categories}"
+                      th:text="${category.name + (iterStat.last ? '' : ', ')}">
+                </span>
+            </p>
+            <p th:text="${recommendation.likes} + ' лайков'"></p>
+            <p class="match-percentage" th:if="${recommendation.matchPercentage != null}">
+                Совпадение: <span th:text="${recommendation.matchPercentage} + '%'"></span>
+            </p>
+        </div>
+
+        <!-- Режимы популярное и новое -->
+        <div th:if="${mode != 'recommendations'}" th:each="artwork : ${artworks.content}" class="artwork-card">
             <a th:href="@{/artwork/details/{id}(id=${artwork.id})}">
                 <img th:src="@{'/uploads/' + ${#strings.replace(artwork.imagePath, ' ', '%20')}}"/>
                 <h3 th:text="${artwork.title}"></h3>
@@ -25,19 +66,66 @@
                 <span th:if="${artwork.user != null}"
                       th:text="${artwork.user.username}">
                 </span>
-
+            </p>
             <p th:if="${artwork.categories != null and !artwork.categories.isEmpty()}">
                 Категории:
                 <span th:each="category, iterStat : ${artwork.categories}"
                       th:text="${category.name + (iterStat.last ? '' : ', ')}">
-    </span>
+                </span>
             </p>
-
             <p th:text="${artwork.likes} + ' лайков'"></p>
         </div>
     </div>
 
-    <div th:replace="fragments/pagination :: pagination(${artworks}, '/artwork/list')"></div>
+    <div th:if="${mode == 'recommendations'}" class="recommendation-refresh">
+        <div sec:authorize="hasRole('ADMIN')" class="admin-controls">
+            <button type="button" class="btn recommendation-action" id="retrainModelBtn">
+                ⟳ Переобучить модель
+            </button>
+        </div>
+        <button type="button" class="btn recommendation-action" onclick="window.location.reload();">Обновить рекомендации</button>
+    </div>
+
+    <script th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function() {
+            var btn = document.getElementById('retrainModelBtn');
+            if (btn) {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    if (!confirm('Переобучить модель рекомендаций? Это может занять несколько секунд при следующем запросе.')) {
+                        return;
+                    }
+                    fetch('/vag/api/recommendations/retrain', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('HTTP error ' + response.status);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            alert(data.message);
+                            // Перезагружаем страницу через 1 секунду, чтобы пользователь увидел обновлённые рекомендации
+                            setTimeout(() => location.reload(), 1000);
+                        } else {
+                            alert('Ошибка: ' + data.message);
+                        }
+                    })
+                    .catch(error => {
+                        alert('Ошибка соединения: ' + error.message);
+                    });
+                });
+            }
+        });
+    </script>
+
+    <!-- Пагинация только для режимов популярное и новое -->
+    <div th:if="${mode != 'recommendations'}" th:replace="fragments/pagination :: pagination(${artworks}, '/artwork/list?mode=' + ${mode})"></div>
 </div>
 
 <div th:replace="fragments/footer :: footer"></div>

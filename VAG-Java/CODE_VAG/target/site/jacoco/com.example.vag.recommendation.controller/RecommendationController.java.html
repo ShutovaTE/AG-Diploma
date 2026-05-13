@@ -2,7 +2,9 @@
 
 import com.example.vag.model.User;
 import com.example.vag.recommendation.dto.RecommendationDTO;
+import com.example.vag.recommendation.dto.TrainingStatusDTO;
 import com.example.vag.recommendation.service.RecommendationService;
+import com.example.vag.recommendation.service.ModelManagementService;
 import com.example.vag.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,124 +19,267 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * REST-контроллер для получения рекомендаций.
- * Возвращает JSON-ответы с персонализированными рекомендациями.
+ * REST-контроллер для получения рекомендаций и управления моделью.
+ * 
+ * Endpoints:
+ * - GET  /api/recommendations - получить рекомендации для текущего пользователя
+ * - GET  /api/recommendations/{userId} - получить рекомендации для конкретного пользователя (ADMIN)
+ * - GET  /api/recommendations/status - проверить статус системы
+ * - POST /api/recommendations/retrain - запустить переобучение модели (ADMIN)
+ * - GET  /api/recommendations/training-status - получить статус обучения (ADMIN)
  */
 @RestController
 @RequestMapping(&quot;/api/recommendations&quot;)
 public class RecommendationController {
 
-<span class="nc" id="L27">    private static final Logger logger = LoggerFactory.getLogger(RecommendationController.class);</span>
+<span class="nc" id="L35">    private static final Logger logger = LoggerFactory.getLogger(RecommendationController.class);</span>
 
     private final RecommendationService recommendationService;
     private final UserService userService;
+    private final ModelManagementService modelManagementService;
 
-    // Внедрение зависимостей через конструктор
+    /**
+     * Конструктор с внедрением зависимостей.
+     */
     public RecommendationController(RecommendationService recommendationService,
-<span class="nc" id="L34">                                    UserService userService) {</span>
-<span class="nc" id="L35">        this.recommendationService = recommendationService;</span>
-<span class="nc" id="L36">        this.userService = userService;</span>
-<span class="nc" id="L37">    }</span>
+                                    UserService userService,
+<span class="nc" id="L46">                                    ModelManagementService modelManagementService) {</span>
+<span class="nc" id="L47">        this.recommendationService = recommendationService;</span>
+<span class="nc" id="L48">        this.userService = userService;</span>
+<span class="nc" id="L49">        this.modelManagementService = modelManagementService;</span>
+<span class="nc" id="L50">    }</span>
+
+    // ========================================================================
+    // ENDPOINTS ДЛЯ ПОЛУЧЕНИЯ РЕКОМЕНДАЦИЙ
+    // ========================================================================
 
     /**
      * Получить рекомендации для текущего авторизованного пользователя.
-     * GET /api/recommendations?topN=5
+     * 
+     * Query параметры:
+     *   topN (optional): количество рекомендаций (по умолчанию 12)
+     * 
+     * Возвращает:
+     *   12 случайно выбранных и отсортированных по релевантности рекомендаций.
+     *   При каждом обновлении страницы набор рекомендаций меняется!
+     * 
+     * @return JSON с рекомендациями
      */
     @GetMapping
     public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; getRecommendationsForCurrentUser(
-            @RequestParam(defaultValue = &quot;10&quot;) int topN,
+            @RequestParam(defaultValue = &quot;12&quot;) int topN,
             Authentication authentication) {
 
-<span class="nc" id="L48">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L73">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
 
-<span class="nc bnc" id="L50" title="All 2 branches missed.">        if (authentication == null) {</span>
-<span class="nc" id="L51">            response.put(&quot;success&quot;, false);</span>
-<span class="nc" id="L52">            response.put(&quot;message&quot;, &quot;Пользователь не авторизован&quot;);</span>
-<span class="nc" id="L53">            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);</span>
+<span class="nc bnc" id="L75" title="All 2 branches missed.">        if (authentication == null) {</span>
+<span class="nc" id="L76">            response.put(&quot;success&quot;, false);</span>
+<span class="nc" id="L77">            response.put(&quot;message&quot;, &quot;Пользователь не авторизован&quot;);</span>
+<span class="nc" id="L78">            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);</span>
         }
 
-<span class="nc" id="L56">        String username = authentication.getName();</span>
-<span class="nc" id="L57">        Long userId = getUserIdByUsername(username);</span>
+<span class="nc" id="L81">        String username = authentication.getName();</span>
+<span class="nc" id="L82">        Long userId = getUserIdByUsername(username);</span>
 
-<span class="nc bnc" id="L59" title="All 2 branches missed.">        if (userId == null) {</span>
-<span class="nc" id="L60">            response.put(&quot;success&quot;, false);</span>
-<span class="nc" id="L61">            response.put(&quot;message&quot;, &quot;Пользователь не найден&quot;);</span>
-<span class="nc" id="L62">            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);</span>
+<span class="nc bnc" id="L84" title="All 2 branches missed.">        if (userId == null) {</span>
+<span class="nc" id="L85">            response.put(&quot;success&quot;, false);</span>
+<span class="nc" id="L86">            response.put(&quot;message&quot;, &quot;Пользователь не найден&quot;);</span>
+<span class="nc" id="L87">            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);</span>
         }
 
-<span class="nc" id="L65">        List&lt;RecommendationDTO&gt; recommendations =</span>
-<span class="nc" id="L66">                recommendationService.getRecommendationsForUser(userId, topN);</span>
+<span class="nc" id="L90">        logger.info(&quot;Получение &quot; + topN + &quot; рекомендаций для пользователя: &quot; + userId);</span>
 
-<span class="nc" id="L68">        response.put(&quot;success&quot;, true);</span>
-<span class="nc" id="L69">        response.put(&quot;recommendations&quot;, recommendations);</span>
-<span class="nc" id="L70">        response.put(&quot;count&quot;, recommendations.size());</span>
-<span class="nc" id="L71">        return ResponseEntity.ok(response);</span>
+<span class="nc" id="L92">        List&lt;RecommendationDTO&gt; recommendations =</span>
+<span class="nc" id="L93">                recommendationService.getRecommendationsForUser(userId, topN);</span>
+
+<span class="nc" id="L95">        response.put(&quot;success&quot;, true);</span>
+<span class="nc" id="L96">        response.put(&quot;userId&quot;, userId);</span>
+<span class="nc" id="L97">        response.put(&quot;recommendations&quot;, recommendations);</span>
+<span class="nc" id="L98">        response.put(&quot;count&quot;, recommendations.size());</span>
+<span class="nc" id="L99">        response.put(&quot;message&quot;, &quot;Рекомендации получены успешно&quot;);</span>
+
+<span class="nc" id="L101">        return ResponseEntity.ok(response);</span>
     }
 
     /**
-     * Получить рекомендации для указанного пользователя (только для ADMIN).
-     * GET /api/recommendations/{userId}?topN=5
+     * Получить рекомендации для указанного пользователя (только для администраторов).
+     * 
+     * @param userId ID пользователя
+     * @param topN количество рекомендаций
+     * @return JSON с рекомендациями
      */
     @GetMapping(&quot;/{userId}&quot;)
     @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
     public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; getRecommendationsForUser(
             @PathVariable Long userId,
-            @RequestParam(defaultValue = &quot;10&quot;) int topN) {
+            @RequestParam(defaultValue = &quot;12&quot;) int topN) {
 
-<span class="nc" id="L84">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L117">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
 
-<span class="nc" id="L86">        List&lt;RecommendationDTO&gt; recommendations =</span>
-<span class="nc" id="L87">                recommendationService.getRecommendationsForUser(userId, topN);</span>
+<span class="nc" id="L119">        logger.info(&quot;ADMIN запросил рекомендации для пользователя: &quot; + userId);</span>
 
-<span class="nc" id="L89">        response.put(&quot;success&quot;, true);</span>
-<span class="nc" id="L90">        response.put(&quot;userId&quot;, userId);</span>
-<span class="nc" id="L91">        response.put(&quot;recommendations&quot;, recommendations);</span>
-<span class="nc" id="L92">        response.put(&quot;count&quot;, recommendations.size());</span>
-<span class="nc" id="L93">        return ResponseEntity.ok(response);</span>
+<span class="nc" id="L121">        List&lt;RecommendationDTO&gt; recommendations =</span>
+<span class="nc" id="L122">                recommendationService.getRecommendationsForUser(userId, topN);</span>
+
+<span class="nc" id="L124">        response.put(&quot;success&quot;, true);</span>
+<span class="nc" id="L125">        response.put(&quot;userId&quot;, userId);</span>
+<span class="nc" id="L126">        response.put(&quot;recommendations&quot;, recommendations);</span>
+<span class="nc" id="L127">        response.put(&quot;count&quot;, recommendations.size());</span>
+
+<span class="nc" id="L129">        return ResponseEntity.ok(response);</span>
     }
 
     /**
      * Проверка статуса системы рекомендаций.
-     * GET /api/recommendations/status
+     * 
+     * @return JSON со статусом системы
      */
     @GetMapping(&quot;/status&quot;)
     public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; getStatus() {
-<span class="nc" id="L102">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L139">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
 
-<span class="nc" id="L104">        boolean available = recommendationService.isRecommendationSystemAvailable();</span>
-<span class="nc" id="L105">        response.put(&quot;available&quot;, available);</span>
+<span class="nc" id="L141">        boolean available = recommendationService.isRecommendationSystemAvailable();</span>
+<span class="nc" id="L142">        boolean modelReady = modelManagementService.isModelReady();</span>
 
-<span class="nc bnc" id="L107" title="All 2 branches missed.">        if (available) {</span>
-<span class="nc" id="L108">            response.put(&quot;message&quot;, &quot;Система рекомендаций готова к работе&quot;);</span>
+<span class="nc" id="L144">        response.put(&quot;success&quot;, true);</span>
+<span class="nc" id="L145">        response.put(&quot;system_available&quot;, available);</span>
+<span class="nc" id="L146">        response.put(&quot;model_ready&quot;, modelReady);</span>
+
+<span class="nc bnc" id="L148" title="All 4 branches missed.">        if (available &amp;&amp; modelReady) {</span>
+<span class="nc" id="L149">            response.put(&quot;status&quot;, &quot;READY&quot;);</span>
+<span class="nc" id="L150">            response.put(&quot;message&quot;, &quot;Система рекомендаций готова к работе&quot;);</span>
         } else {
-<span class="nc" id="L110">            response.put(&quot;message&quot;, &quot;Система рекомендаций недоступна. &quot; +</span>
-                    &quot;Проверьте наличие Python и файла recommendation_engine.py&quot;);
+<span class="nc" id="L152">            response.put(&quot;status&quot;, &quot;NOT_READY&quot;);</span>
+<span class="nc bnc" id="L153" title="All 2 branches missed.">            if (!available) {</span>
+<span class="nc" id="L154">                response.put(&quot;message&quot;, &quot;Система рекомендаций недоступна. &quot; +</span>
+                        &quot;Проверьте наличие Python и файла recommendation_engine.py&quot;);
+<span class="nc bnc" id="L156" title="All 2 branches missed.">            } else if (!modelReady) {</span>
+<span class="nc" id="L157">                response.put(&quot;message&quot;, &quot;Модель рекомендаций обучается. Пожалуйста, подождите.&quot;);</span>
+            }
         }
 
-<span class="nc" id="L114">        return ResponseEntity.ok(response);</span>
+<span class="nc" id="L161">        return ResponseEntity.ok(response);</span>
     }
 
-    // Вспомогательный метод для получения ID пользователя по username
-    private Long getUserIdByUsername(String username) {
-<span class="nc" id="L119">        return userService.findByUsername(username)</span>
-<span class="nc" id="L120">                .map(User::getId)</span>
-<span class="nc" id="L121">                .orElse(null);</span>
-    }
+    // ========================================================================
+    // ENDPOINTS ДЛЯ УПРАВЛЕНИЯ МОДЕЛЬЮ (только для ADMIN)
+    // ========================================================================
 
+    /**
+     * Запуск переобучения модели.
+     * 
+     * Операция выполняется асинхронно. Обучение происходит в фоне
+     * и не блокирует основное приложение.
+     * 
+     * Используйте /api/recommendations/training-status для проверки
+     * статуса обучения.
+     * 
+     * @return JSON с результатом запуска
+     */
     @PostMapping(&quot;/retrain&quot;)
     @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
     public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; retrainModel() {
-<span class="nc" id="L127">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L182">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+
+<span class="nc" id="L184">        logger.info(&quot;ADMIN инициирован запрос на переобучение модели&quot;);</span>
+
         try {
-<span class="nc" id="L129">            recommendationService.retrainModel();</span>
-<span class="nc" id="L130">            response.put(&quot;success&quot;, true);</span>
-<span class="nc" id="L131">            response.put(&quot;message&quot;, &quot;Кэш модели очищен. Модель будет переобучена при следующем запросе рекомендаций.&quot;);</span>
-<span class="nc" id="L132">            return ResponseEntity.ok(response);</span>
-<span class="nc" id="L133">        } catch (Exception e) {</span>
-<span class="nc" id="L134">            response.put(&quot;success&quot;, false);</span>
-<span class="nc" id="L135">            response.put(&quot;message&quot;, &quot;Ошибка при очистке кэша: &quot; + e.getMessage());</span>
-<span class="nc" id="L136">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);</span>
+<span class="nc" id="L187">            boolean started = modelManagementService.retrainModel();</span>
+
+<span class="nc bnc" id="L189" title="All 2 branches missed.">            if (started) {</span>
+<span class="nc" id="L190">                response.put(&quot;success&quot;, true);</span>
+<span class="nc" id="L191">                response.put(&quot;message&quot;, &quot;Переобучение модели начато. &quot; +</span>
+                        &quot;Проверьте статус через /api/recommendations/training-status&quot;);
+<span class="nc" id="L193">                response.put(&quot;task_status&quot;, &quot;IN_PROGRESS&quot;);</span>
+<span class="nc" id="L194">                return ResponseEntity.accepted().body(response);</span>
+            } else {
+<span class="nc" id="L196">                response.put(&quot;success&quot;, false);</span>
+<span class="nc" id="L197">                response.put(&quot;message&quot;, &quot;Переобучение уже в процессе. Дождитесь завершения.&quot;);</span>
+<span class="nc" id="L198">                response.put(&quot;task_status&quot;, &quot;ALREADY_RUNNING&quot;);</span>
+<span class="nc" id="L199">                return ResponseEntity.status(HttpStatus.CONFLICT).body(response);</span>
+            }
+
+<span class="nc" id="L202">        } catch (Exception e) {</span>
+<span class="nc" id="L203">            logger.error(&quot;Ошибка при запуске переобучения: &quot; + e.getMessage());</span>
+<span class="nc" id="L204">            response.put(&quot;success&quot;, false);</span>
+<span class="nc" id="L205">            response.put(&quot;message&quot;, &quot;Ошибка при запуске переобучения: &quot; + e.getMessage());</span>
+<span class="nc" id="L206">            response.put(&quot;error_type&quot;, e.getClass().getSimpleName());</span>
+<span class="nc" id="L207">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);</span>
         }
+    }
+
+    /**
+     * Получить статус процесса обучения модели.
+     * 
+     * Возвращает:
+     * - Текущий статус (IDLE, IN_PROGRESS, COMPLETED, ERROR)
+     * - Время последнего обучения
+     * - Размер файла модели
+     * - Последние логи процесса обучения
+     * 
+     * @return JSON со статусом обучения
+     */
+    @GetMapping(&quot;/training-status&quot;)
+    @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+    public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; getTrainingStatus() {
+<span class="nc" id="L225">        logger.info(&quot;ADMIN запросил статус обучения модели&quot;);</span>
+
+        try {
+<span class="nc" id="L228">            Map&lt;String, Object&gt; statusMap = modelManagementService.getTrainingStatus();</span>
+<span class="nc" id="L229">            TrainingStatusDTO statusDTO = new TrainingStatusDTO(statusMap);</span>
+
+<span class="nc" id="L231">            Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L232">            response.put(&quot;success&quot;, true);</span>
+<span class="nc" id="L233">            response.put(&quot;training_status&quot;, statusDTO);</span>
+<span class="nc" id="L234">            response.put(&quot;timestamp&quot;, System.currentTimeMillis());</span>
+
+<span class="nc" id="L236">            return ResponseEntity.ok(response);</span>
+
+<span class="nc" id="L238">        } catch (Exception e) {</span>
+<span class="nc" id="L239">            logger.error(&quot;Ошибка при получении статуса обучения: &quot; + e.getMessage());</span>
+
+<span class="nc" id="L241">            Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L242">            response.put(&quot;success&quot;, false);</span>
+<span class="nc" id="L243">            response.put(&quot;message&quot;, &quot;Ошибка при получении статуса: &quot; + e.getMessage());</span>
+<span class="nc" id="L244">            response.put(&quot;error_type&quot;, e.getClass().getSimpleName());</span>
+
+<span class="nc" id="L246">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);</span>
+        }
+    }
+
+    /**
+     * Получить полный лог обучения модели.
+     * 
+     * @return Текст лога обучения
+     */
+    @GetMapping(&quot;/training-log&quot;)
+    @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+    public ResponseEntity&lt;String&gt; getTrainingLog() {
+<span class="nc" id="L258">        logger.info(&quot;ADMIN запросил полный лог обучения&quot;);</span>
+
+        try {
+<span class="nc" id="L261">            String log = modelManagementService.getFullTrainingLog();</span>
+<span class="nc" id="L262">            return ResponseEntity.ok()</span>
+<span class="nc" id="L263">                    .header(&quot;Content-Type&quot;, &quot;text/plain; charset=UTF-8&quot;)</span>
+<span class="nc" id="L264">                    .body(log);</span>
+<span class="nc" id="L265">        } catch (Exception e) {</span>
+<span class="nc" id="L266">            logger.error(&quot;Ошибка при получении лога: &quot; + e.getMessage());</span>
+<span class="nc" id="L267">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</span>
+<span class="nc" id="L268">                    .body(&quot;Ошибка при получении лога: &quot; + e.getMessage());</span>
+        }
+    }
+
+    // ========================================================================
+    // ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ
+    // ========================================================================
+
+    /**
+     * Получение ID пользователя по username.
+     */
+    private Long getUserIdByUsername(String username) {
+<span class="nc" id="L280">        return userService.findByUsername(username)</span>
+<span class="nc" id="L281">                .map(User::getId)</span>
+<span class="nc" id="L282">                .orElse(null);</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

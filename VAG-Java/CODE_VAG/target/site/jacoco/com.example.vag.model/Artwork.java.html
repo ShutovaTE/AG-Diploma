@@ -18,7 +18,7 @@ import java.util.Set;
 @Getter
 <span class="nc" id="L19">@Setter</span>
 <span class="nc" id="L20">@NoArgsConstructor</span>
-<span class="nc bnc" id="L21" title="All 132 branches missed.">@EqualsAndHashCode(exclude = {&quot;exhibitions&quot;, &quot;user&quot;, &quot;artworkLikes&quot;, &quot;comments&quot;})</span>
+<span class="nc bnc" id="L21" title="All 140 branches missed.">@EqualsAndHashCode(exclude = {&quot;exhibitions&quot;, &quot;user&quot;, &quot;artworkLikes&quot;, &quot;comments&quot;})</span>
 public class Artwork {
 
     @Id
@@ -90,6 +90,9 @@ public class Artwork {
     @Column(columnDefinition = &quot;TEXT&quot;)
 <span class="nc" id="L91">    private String lastComplaintReason;</span>
 
+    @Transient
+    private Integer matchPercentage;
+
     @OneToMany(mappedBy = &quot;artwork&quot;, cascade = CascadeType.ALL, orphanRemoval = true)
     private List&lt;Like&gt; artworkLikes;
 
@@ -98,147 +101,155 @@ public class Artwork {
 
     @PrePersist
     protected void onCreate() {
-<span class="nc" id="L101">        dateCreation = LocalDate.now();</span>
-<span class="nc" id="L102">    }</span>
+<span class="nc" id="L104">        dateCreation = LocalDate.now();</span>
+<span class="nc" id="L105">    }</span>
 
-<span class="nc" id="L104">    public enum ArtworkStatus {</span>
-<span class="nc" id="L105">        PENDING, APPROVED, REJECTED</span>
+<span class="nc" id="L107">    public enum ArtworkStatus {</span>
+<span class="nc" id="L108">        PENDING, APPROVED, REJECTED</span>
     }
 
     public void setImageFile(MultipartFile imageFile) {
-<span class="nc" id="L109">        this.imageFile = imageFile;</span>
-<span class="nc" id="L110">    }</span>
+<span class="nc" id="L112">        this.imageFile = imageFile;</span>
+<span class="nc" id="L113">    }</span>
 
     public List&lt;Long&gt; getCategoryIds() {
-<span class="nc" id="L113">        return categoryIds;</span>
+<span class="nc" id="L116">        return categoryIds;</span>
     }
 
     public void setCategoryIds(List&lt;Long&gt; categoryIds) {
-<span class="nc" id="L117">        this.categoryIds = categoryIds;</span>
-<span class="nc" id="L118">    }</span>
+<span class="nc" id="L120">        this.categoryIds = categoryIds;</span>
+<span class="nc" id="L121">    }</span>
 
     public MultipartFile getImageFile() {
-<span class="nc" id="L121">        return imageFile;</span>
+<span class="nc" id="L124">        return imageFile;</span>
     }
 
     public Long getId() {
-<span class="nc" id="L125">        return id;</span>
+<span class="nc" id="L128">        return id;</span>
     }
 
     public String getTitle() {
-<span class="nc" id="L129">        return title;</span>
+<span class="nc" id="L132">        return title;</span>
     }
 
     public String getDescription() {
-<span class="nc" id="L133">        return description;</span>
+<span class="nc" id="L136">        return description;</span>
     }
 
     public String getImagePath() {
-<span class="nc" id="L137">        return imagePath;</span>
+<span class="nc" id="L140">        return imagePath;</span>
     }
 
     public LocalDate getDateCreation() {
-<span class="nc" id="L141">        return dateCreation;</span>
+<span class="nc" id="L144">        return dateCreation;</span>
     }
 
     public Set&lt;Exhibition&gt; getExhibitions() {
-<span class="nc" id="L145">        return exhibitions;</span>
+<span class="nc" id="L148">        return exhibitions;</span>
     }
 
     public User getUser() {
-<span class="nc" id="L149">        return user;</span>
+<span class="nc" id="L152">        return user;</span>
     }
 
     public String getStatus() {
-<span class="nc" id="L153">        return status;</span>
+<span class="nc" id="L156">        return status;</span>
     }
 
-<span class="nc" id="L156">    public Long getSimilarArtworkId() { return similarArtworkId; }</span>
-<span class="nc" id="L157">    public void setSimilarArtworkId(Long similarArtworkId) { this.similarArtworkId = similarArtworkId; }</span>
+<span class="nc" id="L159">    public Long getSimilarArtworkId() { return similarArtworkId; }</span>
+<span class="nc" id="L160">    public void setSimilarArtworkId(Long similarArtworkId) { this.similarArtworkId = similarArtworkId; }</span>
 
-<span class="nc" id="L159">    public String getSimilarArtworkTitle() { return similarArtworkTitle; }</span>
-<span class="nc" id="L160">    public void setSimilarArtworkTitle(String similarArtworkTitle) { this.similarArtworkTitle = similarArtworkTitle; }</span>
+<span class="nc" id="L162">    public String getSimilarArtworkTitle() { return similarArtworkTitle; }</span>
+<span class="nc" id="L163">    public void setSimilarArtworkTitle(String similarArtworkTitle) { this.similarArtworkTitle = similarArtworkTitle; }</span>
 
-<span class="nc" id="L162">    public String getAiReport() { return aiReport; }</span>
-<span class="nc" id="L163">    public void setAiReport(String aiReport) { this.aiReport = aiReport; }</span>
+<span class="nc" id="L165">    public String getAiReport() { return aiReport; }</span>
+<span class="nc" id="L166">    public void setAiReport(String aiReport) { this.aiReport = aiReport; }</span>
     public String getRejectionReason() {
-<span class="nc" id="L165">        return rejectionReason;</span>
+<span class="nc" id="L168">        return rejectionReason;</span>
     }
 
     public void setRejectionReason(String rejectionReason) {
-<span class="nc" id="L169">        this.rejectionReason = rejectionReason;</span>
-<span class="nc" id="L170">    }</span>
+<span class="nc" id="L172">        this.rejectionReason = rejectionReason;</span>
+<span class="nc" id="L173">    }</span>
 
     public int getLikes() {
-<span class="nc" id="L173">        return likes;</span>
+<span class="nc" id="L176">        return likes;</span>
     }
 
     public int getViews() {
-<span class="nc" id="L177">        return views;</span>
+<span class="nc" id="L180">        return views;</span>
     }
 
     public void setId(Long id) {
-<span class="nc" id="L181">        this.id = id;</span>
-<span class="nc" id="L182">    }</span>
+<span class="nc" id="L184">        this.id = id;</span>
+<span class="nc" id="L185">    }</span>
 
     public void setTitle(String title) {
-<span class="nc" id="L185">        this.title = title;</span>
-<span class="nc" id="L186">    }</span>
+<span class="nc" id="L188">        this.title = title;</span>
+<span class="nc" id="L189">    }</span>
 
     public void setDescription(String description) {
-<span class="nc" id="L189">        this.description = description;</span>
-<span class="nc" id="L190">    }</span>
+<span class="nc" id="L192">        this.description = description;</span>
+<span class="nc" id="L193">    }</span>
 
     public void setImagePath(String imagePath) {
-<span class="nc" id="L193">        this.imagePath = imagePath;</span>
-<span class="nc" id="L194">    }</span>
+<span class="nc" id="L196">        this.imagePath = imagePath;</span>
+<span class="nc" id="L197">    }</span>
 
     public void setDateCreation(LocalDate dateCreation) {
-<span class="nc" id="L197">        this.dateCreation = dateCreation;</span>
-<span class="nc" id="L198">    }</span>
+<span class="nc" id="L200">        this.dateCreation = dateCreation;</span>
+<span class="nc" id="L201">    }</span>
 
     public void setExhibitions(Set&lt;Exhibition&gt; exhibitions) {
-<span class="nc" id="L201">        this.exhibitions = exhibitions;</span>
-<span class="nc" id="L202">    }</span>
+<span class="nc" id="L204">        this.exhibitions = exhibitions;</span>
+<span class="nc" id="L205">    }</span>
 
     public void setUser(User user) {
-<span class="nc" id="L205">        this.user = user;</span>
-<span class="nc" id="L206">    }</span>
+<span class="nc" id="L208">        this.user = user;</span>
+<span class="nc" id="L209">    }</span>
 
     public void setStatus(String status) {
-<span class="nc" id="L209">        this.status = status;</span>
-<span class="nc" id="L210">    }</span>
+<span class="nc" id="L212">        this.status = status;</span>
+<span class="nc" id="L213">    }</span>
 
     public void setLikes(int likes) {
-<span class="nc" id="L213">        this.likes = likes;</span>
-<span class="nc" id="L214">    }</span>
+<span class="nc" id="L216">        this.likes = likes;</span>
+<span class="nc" id="L217">    }</span>
 
     public void setViews(int views) {
-<span class="nc" id="L217">        this.views = views;</span>
-<span class="nc" id="L218">    }</span>
+<span class="nc" id="L220">        this.views = views;</span>
+<span class="nc" id="L221">    }</span>
 
     public void setArtworkLikes(List&lt;Like&gt; artworkLikes) {
-<span class="nc" id="L221">        this.artworkLikes = artworkLikes;</span>
-<span class="nc" id="L222">    }</span>
+<span class="nc" id="L224">        this.artworkLikes = artworkLikes;</span>
+<span class="nc" id="L225">    }</span>
 
     public void setComments(List&lt;Comment&gt; comments) {
-<span class="nc" id="L225">        this.comments = comments;</span>
-<span class="nc" id="L226">    }</span>
+<span class="nc" id="L228">        this.comments = comments;</span>
+<span class="nc" id="L229">    }</span>
 
     public Set&lt;Category&gt; getCategories() {
-<span class="nc" id="L229">        return categories;</span>
+<span class="nc" id="L232">        return categories;</span>
     }
 
     public void setCategories(Set&lt;Category&gt; categories) {
-<span class="nc" id="L233">        this.categories = categories;</span>
-<span class="nc" id="L234">    }</span>
+<span class="nc" id="L236">        this.categories = categories;</span>
+<span class="nc" id="L237">    }</span>
 
     public List&lt;Like&gt; getArtworkLikes() {
-<span class="nc" id="L237">        return artworkLikes;</span>
+<span class="nc" id="L240">        return artworkLikes;</span>
     }
 
     public List&lt;Comment&gt; getComments() {
-<span class="nc" id="L241">        return comments;</span>
+<span class="nc" id="L244">        return comments;</span>
     }
+
+    public Integer getMatchPercentage() {
+<span class="nc" id="L248">        return matchPercentage;</span>
+    }
+
+    public void setMatchPercentage(Integer matchPercentage) {
+<span class="nc" id="L252">        this.matchPercentage = matchPercentage;</span>
+<span class="nc" id="L253">    }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

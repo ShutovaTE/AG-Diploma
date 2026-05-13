@@ -90,6 +90,9 @@ public class Artwork {
     @Column(columnDefinition = "TEXT")
     private String lastComplaintReason;
 
+    @Transient
+    private Integer matchPercentage;
+
     @OneToMany(mappedBy = "artwork", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Like> artworkLikes;
 
@@ -239,5 +242,13 @@ public class Artwork {
 
     public List<Comment> getComments() {
         return comments;
+    }
+
+    public Integer getMatchPercentage() {
+        return matchPercentage;
+    }
+
+    public void setMatchPercentage(Integer matchPercentage) {
+        this.matchPercentage = matchPercentage;
     }
 }

@@ -6,6 +6,7 @@
        xmlns:tx="http://www.springframework.org/schema/tx"
        xmlns:jpa="http://www.springframework.org/schema/data/jpa"
        xmlns:security="http://www.springframework.org/schema/security"
+       xmlns:task="http://www.springframework.org/schema/task"
        xsi:schemaLocation="http://www.springframework.org/schema/beans
         http://www.springframework.org/schema/beans/spring-beans.xsd
         http://www.springframework.org/schema/context
@@ -17,10 +18,17 @@
         http://www.springframework.org/schema/data/jpa
         http://www.springframework.org/schema/data/jpa/spring-jpa.xsd
         http://www.springframework.org/schema/security
-        http://www.springframework.org/schema/security/spring-security.xsd">
+        http://www.springframework.org/schema/security/spring-security.xsd
+        http://www.springframework.org/schema/task
+        http://www.springframework.org/schema/task/spring-task.xsd">
 
     <context:component-scan base-package="com.example.vag"/>
     <context:property-placeholder location="classpath:minio.properties,classpath:api.properties"/>
+
+    <!-- Включение асинхронной обработки для переобучения модели -->
+    <task:annotation-driven executor="asyncExecutor" scheduler="asyncScheduler"/>
+    <task:executor id="asyncExecutor" pool-size="2"/>
+    <task:scheduler id="asyncScheduler" pool-size="1"/>
 
     <jpa:repositories base-package="com.example.vag.repository"/>
 
@@ -79,7 +87,7 @@
 
     <bean id="dataSource" class="com.zaxxer.hikari.HikariDataSource" destroy-method="close">
         <property name="driverClassName" value="com.mysql.cj.jdbc.Driver"/>
-        <property name="jdbcUrl" value="jdbc:mysql://localhost:3306/vag1?useSSL=false&amp;serverTimezone=UTC&amp;characterEncoding=UTF-8&amp;useUnicode=true"/>
+        <property name="jdbcUrl" value="jdbc:mysql://localhost:3306/vag1?allowPublicKeyRetrieval=true&amp;useSSL=false&amp;serverTimezone=UTC&amp;characterEncoding=UTF-8&amp;useUnicode=true"/>
         <property name="username" value="root"/>
         <property name="password" value="root"/>
         <property name="maximumPoolSize" value="10"/>
@@ -226,15 +234,25 @@
         <property name="maxUploadSize" value="-1"/>
     </bean>
 
+    <!-- === СЕРВИС УПРАВЛЕНИЯ МОДЕЛЬЮ === -->
+    <bean id="modelManagementService" class="com.example.vag.recommendation.service.ModelManagementService">
+        <constructor-arg value="python"/>
+        <constructor-arg value="D:/Git/AG-Diploma/VAG-Java/ML-Recommendation/model_trainer.py"/>
+        <constructor-arg value="D:/Git/AG-Diploma/VAG-Java/ML-Recommendation/model_cache"/>
+    </bean>
+
+    <!-- === СЕРВИС РЕКОМЕНДАЦИЙ === -->
     <bean id="recommendationService" class="com.example.vag.recommendation.service.RecommendationServiceImpl">
         <constructor-arg value="python"/>
         <constructor-arg value="D:/Git/AG-Diploma/VAG-Java/ML-Recommendation/recommendation_engine.py"/>
+        <constructor-arg ref="modelManagementService"/>
     </bean>
 
     <bean id="recommendationController"
           class="com.example.vag.recommendation.controller.RecommendationController">
         <constructor-arg ref="recommendationService"/>
         <constructor-arg ref="userService"/>
+        <constructor-arg ref="modelManagementService"/>
     </bean>
 
 </beans>

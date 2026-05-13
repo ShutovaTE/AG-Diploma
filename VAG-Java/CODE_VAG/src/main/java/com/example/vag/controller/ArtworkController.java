@@ -1,5 +1,6 @@
 package com.example.vag.controller;
 
+import com.example.vag.recommendation.dto.RecommendationDTO;
 import com.example.vag.dto.ModerationResult;
 import com.example.vag.model.Artwork;
 import com.example.vag.model.*;
@@ -60,13 +61,70 @@ public class ArtworkController {
     public String listArtworks(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "12") int size,
+            @RequestParam(defaultValue = "popular") String mode,
             Model model) {
 
         page = Math.max(0, page);
-        
-        Page<Artwork> artworkPage = artworkService.findPaginatedApprovedArtworks(PageRequest.of(page, size));
+
+        Page<Artwork> artworkPage;
+        List<Artwork> recommendations = null;
+
+        switch (mode) {
+            case "popular":
+                artworkPage = artworkService.findPaginatedApprovedArtworksByLikes(PageRequest.of(page, size));
+                break;
+            case "new":
+                artworkPage = artworkService.findPaginatedApprovedArtworksByDate(PageRequest.of(page, size));
+                break;
+            case "recommendations":
+                // Для режима рекомендаций получаем все публикации для пагинации
+                artworkPage = artworkService.findPaginatedApprovedArtworks(PageRequest.of(page, size));
+                // Получаем рекомендации для текущего пользователя
+                try {
+                    User currentUser = userService.getCurrentUser();
+                    if (currentUser != null) {
+                        List<RecommendationDTO> recommendationDTOs = artworkService.getRecommendationsForUser(currentUser.getId());
+                        // Преобразуем DTO в полные объекты Artwork с процентами совпадения
+                        recommendations = new ArrayList<>();
+                        for (RecommendationDTO dto : recommendationDTOs) {
+                            Artwork artwork = artworkService.findByIdWithCategories(dto.getArtworkId()).orElse(null);
+                            if (artwork != null) {
+                                artwork.setMatchPercentage(dto.getScore() != null ? (int)(dto.getScore() * 100) : 0);
+                                recommendations.add(artwork);
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    // Пользователь не авторизован, показываем популярные
+                    mode = "popular";
+                    artworkPage = artworkService.findPaginatedApprovedArtworksByLikes(PageRequest.of(page, size));
+                }
+                break;
+            default:
+                mode = "popular";
+                artworkPage = artworkService.findPaginatedApprovedArtworksByLikes(PageRequest.of(page, size));
+                break;
+        }
+
         model.addAttribute("artworks", artworkPage);
+        model.addAttribute("mode", mode);
+        model.addAttribute("recommendations", recommendations);
         return "artwork/list";
+    }
+
+    @GetMapping("/search")
+    public String searchArtworks(
+            @RequestParam String query,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size,
+            Model model) {
+
+        page = Math.max(0, page);
+
+        Page<Artwork> artworkPage = artworkService.searchArtworksByTitle(query, PageRequest.of(page, size));
+        model.addAttribute("artworks", artworkPage);
+        model.addAttribute("searchQuery", query);
+        return "artwork/search";
     }
 
     @GetMapping("/details/{id}")

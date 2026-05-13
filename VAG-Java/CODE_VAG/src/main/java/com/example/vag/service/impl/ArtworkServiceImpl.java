@@ -1,6 +1,7 @@
 package com.example.vag.service.impl;
 
 import com.example.vag.model.*;
+import com.example.vag.recommendation.dto.RecommendationDTO;
 import com.example.vag.recommendation.service.RecommendationService;
 import com.example.vag.repository.*;
 import com.example.vag.service.ArtworkService;
@@ -160,6 +161,24 @@ public class ArtworkServiceImpl implements ArtworkService {
     @Transactional(readOnly = true)
     public Page<Artwork> findPaginatedApprovedArtworks(Pageable pageable) {
         return artworkRepository.findApprovedArtworks(pageable);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Artwork> findPaginatedApprovedArtworksByLikes(Pageable pageable) {
+        return artworkRepository.findApprovedArtworksByLikes(pageable);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Artwork> findPaginatedApprovedArtworksByDate(Pageable pageable) {
+        return artworkRepository.findApprovedArtworksByDate(pageable);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<com.example.vag.recommendation.dto.RecommendationDTO> getRecommendationsForUser(Long userId) {
+        return recommendationService.getRecommendationsForUser(userId);
     }
 
     @Override
@@ -426,5 +445,10 @@ public class ArtworkServiceImpl implements ArtworkService {
             return "\"" + normalized + "\"";
         }
         return "\"" + normalized.substring(0, 80) + "...\"";
+    }
+
+    @Override
+    public Page<Artwork> searchArtworksByTitle(String title, Pageable pageable) {
+        return artworkRepository.findByTitleContainingIgnoreCaseAndStatus(title, "APPROVED", pageable);
     }
 }

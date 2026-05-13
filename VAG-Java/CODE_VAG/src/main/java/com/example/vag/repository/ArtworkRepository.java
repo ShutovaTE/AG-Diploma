@@ -71,6 +71,28 @@ public interface ArtworkRepository extends JpaRepository<Artwork, Long> {
     )
     Page<Artwork> findApprovedArtworks(Pageable pageable);
 
+    @Query(
+            value = "SELECT DISTINCT a FROM Artwork a " +
+                    "LEFT JOIN FETCH a.user " +
+                    "LEFT JOIN FETCH a.categories " +
+                    "WHERE a.status = 'APPROVED' " +
+                    "ORDER BY SIZE(a.artworkLikes) DESC, a.id DESC",
+            countQuery = "SELECT COUNT(DISTINCT a) FROM Artwork a " +
+                    "WHERE a.status = 'APPROVED'"
+    )
+    Page<Artwork> findApprovedArtworksByLikes(Pageable pageable);
+
+    @Query(
+            value = "SELECT DISTINCT a FROM Artwork a " +
+                    "LEFT JOIN FETCH a.user " +
+                    "LEFT JOIN FETCH a.categories " +
+                    "WHERE a.status = 'APPROVED' " +
+                    "ORDER BY a.dateCreation DESC",
+            countQuery = "SELECT COUNT(DISTINCT a) FROM Artwork a " +
+                    "WHERE a.status = 'APPROVED'"
+    )
+    Page<Artwork> findApprovedArtworksByDate(Pageable pageable);
+
     @Query("SELECT CASE WHEN COUNT(l) > 0 THEN true ELSE false END FROM Like l WHERE l.artwork = :artwork AND l.user = :user")
     boolean existsByArtworkAndUser(
             @Param("artwork") Artwork artwork,
@@ -116,4 +138,8 @@ public interface ArtworkRepository extends JpaRepository<Artwork, Long> {
 
     @Query("SELECT COUNT(a) FROM Artwork a WHERE a.imagePath = :imagePath")
     long countByImagePath(@Param("imagePath") String imagePath);
+
+    @EntityGraph(attributePaths = {"user", "categories"})
+    @Query("SELECT a FROM Artwork a WHERE LOWER(a.title) LIKE LOWER(CONCAT('%', :title, '%')) AND a.status = :status")
+    Page<Artwork> findByTitleContainingIgnoreCaseAndStatus(@Param("title") String title, @Param("status") String status, Pageable pageable);
 }

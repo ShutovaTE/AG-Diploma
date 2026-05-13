@@ -607,6 +607,93 @@ def get_recommendations_for_user_json(user_id, connection, top_n=10, force_retra
     }, ensure_ascii = False)
 
 
+def get_recommendations_for_user_extended(user_id, top_n=50):
+    """
+    Получение расширённого списка рекомендаций (ТОП-N) без обучения модели.
+    Загружает готовую модель из кэша.
+    
+    Параметры:
+        user_id (int): ID пользователя
+        top_n (int): Количество рекомендаций (по умолчанию 50)
+    
+    Возвращает:
+        str: JSON со списком рекомендаций и их скорами
+        
+    Формат JSON:
+        {
+            "success": true/false,
+            "user_id": 123,
+            "recommendations": [
+                {"artwork_id": 1, "title": "...", "author": "...", 
+                 "categories": "...", "likes": 10, "score": 0.95},
+                ...
+            ],
+            "total": 50,
+            "algorithm": "hybrid",
+            "model_version": "2.0"
+        }
+    """
+    import json
+    
+    try:
+        user_id = int(user_id)
+        
+        # === Проверка наличия обученной модели ===
+        if not is_cache_valid():
+            return json.dumps({
+                "success": False,
+                "error": "Обученная модель не найдена или устарела. Требуется переобучение.",
+                "recommendations": []
+            }, ensure_ascii=False)
+        
+        # === Загрузка модели ===
+        svd, content_sim, artworks_df, interactions_df = load_model()
+        
+        if svd is None or artworks_df.empty:
+            return json.dumps({
+                "success": False,
+                "error": "Не удалось загрузить модель или данные",
+                "recommendations": []
+            }, ensure_ascii=False)
+        
+        # === Получение рекомендаций ===
+        rec_tuples = hybrid_recommendations(
+            user_id, interactions_df, artworks_df, svd, 
+            content_sim, alpha=0.6, top_n=top_n
+        )
+        
+        # === Формирование результата ===
+        recommendations = []
+        for aid, score in rec_tuples:
+            artwork = artworks_df[artworks_df['artwork_id'] == aid]
+            if not artwork.empty:
+                row = artwork.iloc[0]
+                recommendations.append({
+                    "artwork_id": int(row['artwork_id']),
+                    "title": row['title'],
+                    "author": row['author_name'],
+                    "categories": row['categories'],
+                    "likes": int(row['likes']),
+                    "score": float(score)
+                })
+        
+        return json.dumps({
+            "success": True,
+            "user_id": user_id,
+            "recommendations": recommendations,
+            "total": len(recommendations),
+            "algorithm": "hybrid",
+            "model_version": "2.0"
+        }, ensure_ascii=False)
+        
+    except Exception as e:
+        return json.dumps({
+            "success": False,
+            "error": f"Ошибка при получении рекомендаций: {str(e)}",
+            "recommendations": []
+        }, ensure_ascii=False)
+
+
 # =============================================================================
 # 8. Главная функция (демонстрация работы)
 # =============================================================================
@@ -723,12 +810,23 @@ def main():
 
 if __name__ == "__main__":
     import sys
+    
+    # Обработка аргументов командной строки
     force = '--force_retrain' in sys.argv
+    extended = '--extended' in sys.argv
+    
     if len(sys.argv) > 1 and sys.argv[1] == "--user_id":
         user_id = int(sys.argv[2])
-        connection = get_db_connection()
-        if connection:
-            print(get_recommendations_for_user_json(user_id, connection, top_n=10, force_retrain=force))
-            connection.close()
+        
+        if extended:
+            # Новый режим: получение ТОП-50 из готовой модели
+            # Используется Java-сервисом для динамических рекомендаций
+            print(get_recommendations_for_user_extended(user_id, top_n=50))
+        else:
+            # Старый режим: обучение + получение (для обратной совместимости)
+            connection = get_db_connection()
+            if connection:
+                print(get_recommendations_for_user_json(user_id, connection, top_n=10, force_retrain=force))
+                connection.close()
     else:
         main()

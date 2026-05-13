@@ -13,6 +13,10 @@
         </div>
 
         <div class="nav-links">
+            <form th:action="@{/artwork/search}" method="get" class="search-form">
+                <input type="text" name="query" placeholder="Поиск публикаций..." class="search-input" required>
+                <button type="submit" class="search-btn">🔍</button>
+            </form>
             <a th:href="@{/artwork/list}">Публикации</a>
             <a th:href="@{/exhibition/list}">Выставки</a>
             <a th:href="@{/category/list}">Категории</a>

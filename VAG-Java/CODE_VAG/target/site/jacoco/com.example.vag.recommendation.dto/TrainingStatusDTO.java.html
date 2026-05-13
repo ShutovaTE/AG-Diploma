@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ru"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TrainingStatusDTO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">vag</a> &gt; <a href="index.source.html" class="el_package">com.example.vag.recommendation.dto</a> &gt; <span class="el_source">TrainingStatusDTO.java</span></div><h1>TrainingStatusDTO.java</h1><pre class="source lang-java linenums">package com.example.vag.recommendation.dto;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * DTO для передачи информации о статусе обучения модели рекомендаций.
+ * Используется в REST API для мониторинга переобучения администратором.
+ */
+public class TrainingStatusDTO {
+
+    // === СТАТУС МОДЕЛИ ===
+    private boolean modelReady;
+    private String trainingStatus;
+    private String trainingStatusDescription;
+    private String lastTrainingTime;
+    private String lastError;
+    private boolean modelExists;
+    private String modelFileSizeMb;
+
+    // === ЛОГИ ===
+    private List&lt;String&gt; recentLogs;
+
+    // === КОНСТРУКТОР ===
+<span class="nc" id="L26">    public TrainingStatusDTO() {</span>
+<span class="nc" id="L27">    }</span>
+
+<span class="nc" id="L29">    public TrainingStatusDTO(Map&lt;String, Object&gt; statusMap) {</span>
+<span class="nc" id="L30">        this.modelReady = (Boolean) statusMap.getOrDefault(&quot;model_ready&quot;, false);</span>
+<span class="nc" id="L31">        this.trainingStatus = (String) statusMap.getOrDefault(&quot;training_status&quot;, &quot;UNKNOWN&quot;);</span>
+<span class="nc" id="L32">        this.trainingStatusDescription = (String) statusMap.getOrDefault(&quot;training_status_description&quot;, &quot;&quot;);</span>
+<span class="nc" id="L33">        this.lastTrainingTime = (String) statusMap.getOrDefault(&quot;last_training_time&quot;, &quot;Никогда&quot;);</span>
+<span class="nc" id="L34">        this.lastError = (String) statusMap.getOrDefault(&quot;last_error&quot;, null);</span>
+<span class="nc" id="L35">        this.modelExists = (Boolean) statusMap.getOrDefault(&quot;model_exists&quot;, false);</span>
+<span class="nc" id="L36">        this.modelFileSizeMb = (String) statusMap.getOrDefault(&quot;model_file_size_mb&quot;, &quot;0&quot;);</span>
+<span class="nc" id="L37">        this.recentLogs = (List&lt;String&gt;) statusMap.getOrDefault(&quot;recent_logs&quot;, List.of());</span>
+<span class="nc" id="L38">    }</span>
+
+    // === GETTERS &amp; SETTERS ===
+
+    public boolean isModelReady() {
+<span class="nc" id="L43">        return modelReady;</span>
+    }
+
+    public void setModelReady(boolean modelReady) {
+<span class="nc" id="L47">        this.modelReady = modelReady;</span>
+<span class="nc" id="L48">    }</span>
+
+    public String getTrainingStatus() {
+<span class="nc" id="L51">        return trainingStatus;</span>
+    }
+
+    public void setTrainingStatus(String trainingStatus) {
+<span class="nc" id="L55">        this.trainingStatus = trainingStatus;</span>
+<span class="nc" id="L56">    }</span>
+
+    public String getTrainingStatusDescription() {
+<span class="nc" id="L59">        return trainingStatusDescription;</span>
+    }
+
+    public void setTrainingStatusDescription(String trainingStatusDescription) {
+<span class="nc" id="L63">        this.trainingStatusDescription = trainingStatusDescription;</span>
+<span class="nc" id="L64">    }</span>
+
+    public String getLastTrainingTime() {
+<span class="nc" id="L67">        return lastTrainingTime;</span>
+    }
+
+    public void setLastTrainingTime(String lastTrainingTime) {
+<span class="nc" id="L71">        this.lastTrainingTime = lastTrainingTime;</span>
+<span class="nc" id="L72">    }</span>
+
+    public String getLastError() {
+<span class="nc" id="L75">        return lastError;</span>
+    }
+
+    public void setLastError(String lastError) {
+<span class="nc" id="L79">        this.lastError = lastError;</span>
+<span class="nc" id="L80">    }</span>
+
+    public boolean isModelExists() {
+<span class="nc" id="L83">        return modelExists;</span>
+    }
+
+    public void setModelExists(boolean modelExists) {
+<span class="nc" id="L87">        this.modelExists = modelExists;</span>
+<span class="nc" id="L88">    }</span>
+
+    public String getModelFileSizeMb() {
+<span class="nc" id="L91">        return modelFileSizeMb;</span>
+    }
+
+    public void setModelFileSizeMb(String modelFileSizeMb) {
+<span class="nc" id="L95">        this.modelFileSizeMb = modelFileSizeMb;</span>
+<span class="nc" id="L96">    }</span>
+
+    public List&lt;String&gt; getRecentLogs() {
+<span class="nc" id="L99">        return recentLogs;</span>
+    }
+
+    public void setRecentLogs(List&lt;String&gt; recentLogs) {
+<span class="nc" id="L103">        this.recentLogs = recentLogs;</span>
+<span class="nc" id="L104">    }</span>
+
+    @Override
+    public String toString() {
+<span class="nc" id="L108">        return &quot;TrainingStatusDTO{&quot; +</span>
+                &quot;modelReady=&quot; + modelReady +
+                &quot;, trainingStatus='&quot; + trainingStatus + '\'' +
+                &quot;, lastTrainingTime='&quot; + lastTrainingTime + '\'' +
+                &quot;, modelExists=&quot; + modelExists +
+                '}';
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
