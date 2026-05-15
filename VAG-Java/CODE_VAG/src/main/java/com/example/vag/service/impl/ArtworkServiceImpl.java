@@ -6,6 +6,7 @@ import com.example.vag.recommendation.service.RecommendationService;
 import com.example.vag.repository.*;
 import com.example.vag.service.ArtworkService;
 import com.example.vag.service.ExhibitionService;
+import com.example.vag.service.ImageFeatureService;
 import com.example.vag.service.ModerationService;
 import com.example.vag.service.NotificationService;
 import com.example.vag.util.FileUploadUtil;
@@ -47,6 +48,7 @@ public class ArtworkServiceImpl implements ArtworkService {
     private final RecommendationService recommendationService;
     private final ModerationService moderationService;
     private final ImageHashService imageHashService;
+    private final ImageFeatureService imageFeatureService;
 
     public ArtworkServiceImpl(ArtworkRepository artworkRepository,
                               CategoryRepository categoryRepository,
@@ -57,7 +59,8 @@ public class ArtworkServiceImpl implements ArtworkService {
                               NotificationService notificationService, 
                               RecommendationService recommendationService,
                               ModerationService moderationService,
-                              ImageHashService imageHashService) {
+                              ImageHashService imageHashService,
+                              ImageFeatureService imageFeatureService) {
         this.artworkRepository = artworkRepository;
         this.categoryRepository = categoryRepository;
         this.commentRepository = commentRepository;
@@ -67,7 +70,7 @@ public class ArtworkServiceImpl implements ArtworkService {
         this.notificationService = notificationService;
         this.recommendationService = recommendationService;
         this.moderationService = moderationService;
-
+        this.imageFeatureService = imageFeatureService;
         this.imageHashService = imageHashService;
     }
 
@@ -97,6 +100,8 @@ public class ArtworkServiceImpl implements ArtworkService {
         artwork.setUser(user);
         artwork.setLikes(0);
         artwork.setViews(0);
+
+        applyImageFeatures(artwork, imageFile);
 
         // Сохраняем отчёт ИИ
         artwork.setAiReport(moderationResult.getAiReport());
@@ -214,11 +219,15 @@ public class ArtworkServiceImpl implements ArtworkService {
                     double scoreB = calculateSimilarityScore(artwork, currentCategoryIds, currentAuthorId, b, maxLikes);
                     return Double.compare(scoreB, scoreA);
                 })
-                .limit(Math.max(limit * 3, 24))
+                .limit(limit)
                 .collect(Collectors.toList());
 
-        Collections.shuffle(ranked, new Random());
-        return ranked.subList(0, Math.min(limit, ranked.size()));
+        for (Artwork candidate : ranked) {
+            int percent = (int) Math.round(calculateSimilarityScore(artwork, currentCategoryIds, currentAuthorId, candidate, maxLikes) * 100);
+            candidate.setMatchPercentage(Math.min(100, Math.max(0, percent)));
+        }
+
+        return ranked;
     }
 
     private double calculateSimilarityScore(Artwork source,
@@ -246,7 +255,111 @@ public class ArtworkServiceImpl implements ArtworkService {
         double popularityScore = candidate.getLikes() / maxLikes;
 
         // Основной вес даётся категориям, меньше — автору, немного — популярности.
-        return categoryScore * 0.78 + authorScore * 0.18 + popularityScore * 0.04;
+        double objectScore = calculateObjectMatchScore(source.getDetectedObjects(), candidate.getDetectedObjects());
+        double colorScore = calculateColorMatchScore(source, candidate);
+
+        // Перераспределённые веса: категории остались важными, объектная похожесть добавляет контекст,
+        // цветовая похожесть учитывает визуальное совпадение без серьёзной нагрузки.
+        return categoryScore * 0.40
+                + objectScore * 0.25
+                + colorScore * 0.20
+                + authorScore * 0.10
+                + popularityScore * 0.05;
+    }
+
+    private double calculateObjectMatchScore(String sourceDetectedObjects, String candidateDetectedObjects) {
+        if (sourceDetectedObjects == null || sourceDetectedObjects.isBlank()
+                || candidateDetectedObjects == null || candidateDetectedObjects.isBlank()) {
+            return 0.0;
+        }
+
+        var sourceSet = parseDetectedObjects(sourceDetectedObjects);
+        var candidateSet = parseDetectedObjects(candidateDetectedObjects);
+        if (sourceSet.isEmpty() || candidateSet.isEmpty()) {
+            return 0.0;
+        }
+
+        long intersection = sourceSet.stream().filter(candidateSet::contains).count();
+        long union = sourceSet.size() + candidateSet.size() - intersection;
+        if (union == 0) {
+            return 0.0;
+        }
+        return (double) intersection / union;
+    }
+
+    private double calculateColorMatchScore(Artwork source, Artwork candidate) {
+        if (source.getAverageRed() == null || source.getAverageGreen() == null || source.getAverageBlue() == null
+                || candidate.getAverageRed() == null || candidate.getAverageGreen() == null || candidate.getAverageBlue() == null) {
+            return 0.0;
+        }
+
+        double dr = source.getAverageRed() - candidate.getAverageRed();
+        double dg = source.getAverageGreen() - candidate.getAverageGreen();
+        double db = source.getAverageBlue() - candidate.getAverageBlue();
+        double distance = Math.sqrt(dr * dr + dg * dg + db * db);
+        double maxDistance = Math.sqrt(3.0 * 255.0 * 255.0);
+        return Math.max(0.0, 1.0 - (distance / maxDistance));
+    }
+
+    private java.util.Set<String> parseDetectedObjects(String detectedObjects) {
+        if (detectedObjects == null || detectedObjects.isBlank()) {
+            return java.util.Collections.emptySet();
+        }
+        return java.util.Arrays.stream(detectedObjects.split(","))
+                .map(String::trim)
+                .filter(tag -> !tag.isEmpty())
+                .map(String::toLowerCase)
+                .collect(java.util.stream.Collectors.toSet());
+    }
+
+    private void applyImageFeatures(Artwork artwork, org.springframework.web.multipart.MultipartFile imageFile) {
+        try {
+            var analysis = imageFeatureService.analyze(imageFile);
+            artwork.setAverageRed(analysis.getAverageRed());
+            artwork.setAverageGreen(analysis.getAverageGreen());
+            artwork.setAverageBlue(analysis.getAverageBlue());
+            artwork.setColorHistogram(analysis.getColorHistogram());
+            artwork.setDetectedObjects(analysis.getDetectedObjects());
+        } catch (Exception e) {
+            System.err.println("Ошибка анализа изображения: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public void rescanArtworkFeatures(Long artworkId) {
+        Artwork artwork = artworkRepository.findById(artworkId)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid artwork ID"));
+        if (artwork.getImagePath() == null || artwork.getImagePath().isBlank()) {
+            throw new IllegalArgumentException("У публикации нет пути к изображению для пересканирования");
+        }
+        try {
+            var fileName = artwork.getImagePath().substring(artwork.getImagePath().lastIndexOf('/') + 1);
+            var multipartFile = fileUploadUtil.getAsMultipartFile(artwork.getImagePath(), fileName);
+            applyImageFeatures(artwork, multipartFile);
+            artworkRepository.save(artwork);
+            recommendationService.clearModelCache();
+        } catch (Exception e) {
+            throw new RuntimeException("Ошибка пересканирования изображения: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public void rescanAllArtworkFeatures() {
+        List<Artwork> allArtworks = artworkRepository.findAll();
+        for (Artwork artwork : allArtworks) {
+            if (artwork.getImagePath() == null || artwork.getImagePath().isBlank()) {
+                continue;
+            }
+            try {
+                var fileName = artwork.getImagePath().substring(artwork.getImagePath().lastIndexOf('/') + 1);
+                var multipartFile = fileUploadUtil.getAsMultipartFile(artwork.getImagePath(), fileName);
+                applyImageFeatures(artwork, multipartFile);
+                artworkRepository.save(artwork);
+            } catch (Exception e) {
+                System.err.println("Ошибка при пересканировании публикации " + artwork.getId() + ": " + e.getMessage());
+            }
+        }
+        recommendationService.clearModelCache();
     }
 
     @Override

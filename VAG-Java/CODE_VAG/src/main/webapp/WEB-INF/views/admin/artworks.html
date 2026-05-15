@@ -218,8 +218,8 @@
     <div th:if="${param.approved}" class="alert alert-success">Публикация одобрена.</div>
     <div th:if="${param.rejected}" class="alert alert-success">Публикация отклонена.</div>
 
-    <div class="admin-filters">
-        <form th:action="@{/admin/artworks}" method="get">
+    <div class="admin-filters" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+        <form th:action="@{/admin/artworks}" method="get" style="display: inline-flex; gap: 8px; align-items: center;">
             <select name="status">
                 <option value="" th:selected="${param.status == null || param.status.isEmpty()}">Все статусы</option>
                 <option value="PENDING" th:selected="${param.status != null && param.status[0] == 'PENDING'}">Ожидает проверки</option>
@@ -227,6 +227,9 @@
                 <option value="REJECTED" th:selected="${param.status != null && param.status[0] == 'REJECTED'}">Отклонена</option>
             </select>
             <button type="submit" class="btn btn-primary">Фильтр</button>
+        </form>
+        <form th:action="@{/admin/artworks/rescan-all}" method="post" style="display: inline-flex;">
+            <button type="submit" class="btn btn-success" style="background: #2563eb;">Пересканировать все изображения</button>
         </form>
     </div>
 
@@ -285,6 +288,10 @@
                             <a th:href="@{/admin/artworks/reject/{id}(id=${artwork.id})}" class="btn btn-danger">Отклонить</a>
                         </div>
                     </div>
+
+                    <form th:action="@{/admin/artworks/rescan/{id}(id=${artwork.id})}" method="post" style="display: inline;">
+                        <button type="submit" class="btn btn-secondary" style="background: #f59e0b; color: #000;">Пересканировать</button>
+                    </form>
 
                     <button th:if="${artwork.aiReport != null}"
                             class="ai-report-btn"

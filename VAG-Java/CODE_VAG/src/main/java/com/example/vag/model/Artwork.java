@@ -69,6 +69,21 @@ public class Artwork {
     @Column(nullable = false)
     private int likes = 0;
 
+    @Column(nullable = true)
+    private Integer averageRed;
+
+    @Column(nullable = true)
+    private Integer averageGreen;
+
+    @Column(nullable = true)
+    private Integer averageBlue;
+
+    @Column(columnDefinition = "TEXT")
+    private String colorHistogram;
+
+    @Column(columnDefinition = "TEXT")
+    private String detectedObjects;
+
     @Column(nullable = false)
     private int views = 0;
 

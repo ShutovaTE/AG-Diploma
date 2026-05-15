@@ -155,7 +155,7 @@ model.addAttribute("recommendations", recommendations);
 | Параметр | Описание | По умолчанию |
 |----------|----------|--------------|
 | `python.executable` | Путь к Python | `python` |
-| `recommendation.script.path` | Путь к скрипту | `../ML-Recommendation/recommendation_engine.py` |
+| `recommendation.script.path` | Путь к скрипту | `ML-Recommendation/recommendation_engine.py` |
 | `recommendation.default.topn` | Количество рекомендаций | `10` |
 | `recommendation.alpha` | Вес коллаборативной фильтрации (0.0-1.0) | `0.6` |
 | `recommendation.enabled` | Включить модуль | `false` |

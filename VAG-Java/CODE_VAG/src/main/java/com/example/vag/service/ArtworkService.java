@@ -46,5 +46,8 @@ public interface ArtworkService {
     Page<Artwork> findAllPaginated(Pageable pageable);
     List<Artwork> findSimilarApprovedArtworks(Artwork artwork, int limit);
 
+    void rescanArtworkFeatures(Long artworkId);
+    void rescanAllArtworkFeatures();
+
     Page<Artwork> searchArtworksByTitle(String title, Pageable pageable);
 }

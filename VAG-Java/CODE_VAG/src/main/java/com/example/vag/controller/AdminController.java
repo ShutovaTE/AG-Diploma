@@ -139,6 +139,30 @@ public class AdminController {
         return "redirect:/admin/artworks";
     }
 
+    @PostMapping("/artworks/rescan/{id}")
+    public String rescanArtwork(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        try {
+            artworkService.rescanArtworkFeatures(id);
+            redirectAttributes.addFlashAttribute("message", "Изображение публикации успешно пересканировано");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Ошибка при пересканировании публикации: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return "redirect:/admin/artworks";
+    }
+
+    @PostMapping("/artworks/rescan-all")
+    public String rescanAllArtworks(RedirectAttributes redirectAttributes) {
+        try {
+            artworkService.rescanAllArtworkFeatures();
+            redirectAttributes.addFlashAttribute("message", "Пересканирование всех публикаций запущено успешно");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Ошибка при пересканировании всех публикаций: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return "redirect:/admin/artworks";
+    }
+
     @GetMapping("/artworks")
     public String listArtworks(
             @RequestParam(required = false) String status,

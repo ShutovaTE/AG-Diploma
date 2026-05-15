@@ -330,15 +330,15 @@ GET /api/recommendations/training-status показывает COMPLETED
 <bean id="modelManagementService" 
       class="com.example.vag.recommendation.service.ModelManagementService">
     <constructor-arg value="python"/>
-    <constructor-arg value="D:/Git/AG-Diploma/VAG-Java/ML-Recommendation/model_trainer.py"/>
-    <constructor-arg value="D:/Git/AG-Diploma/VAG-Java/ML-Recommendation/model_cache"/>
+    <constructor-arg value="ML-Recommendation/model_trainer.py"/>
+    <constructor-arg value="ML-Recommendation/model_cache"/>
 </bean>
 
 <!-- Сервис рекомендаций (обновлён) -->
 <bean id="recommendationService" 
       class="com.example.vag.recommendation.service.RecommendationServiceImpl">
     <constructor-arg value="python"/>
-    <constructor-arg value="D:/Git/AG-Diploma/VAG-Java/ML-Recommendation/recommendation_engine.py"/>
+    <constructor-arg value="ML-Recommendation/recommendation_engine.py"/>
     <constructor-arg ref="modelManagementService"/>
 </bean>
 ```

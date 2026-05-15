@@ -57,7 +57,7 @@ public class RecommendationServiceImpl implements RecommendationService {
 
     private static String getDefaultScriptPath() {
         String projectRoot = System.getProperty("user.dir");
-        return Paths.get(projectRoot, "..", "ML-Recommendation", "recommendation_engine.py").toString();
+        return Paths.get(projectRoot, "ML-Recommendation", "recommendation_engine.py").toString();
     }
 
     // === ОСНОВНЫЕ МЕТОДЫ ===

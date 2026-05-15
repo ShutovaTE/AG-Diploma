@@ -50,6 +50,19 @@
                           th:text="${category.name + (iterStat.last ? '' : ', ')}">
                     </span>
                 </p>
+                <div th:if="${artwork.detectedObjects != null && !artwork.detectedObjects.isEmpty()}">
+                    <p>Объекты:
+                        <span th:each="tag, iterStat : ${#strings.split(artwork.detectedObjects, ',')}"
+                              th:text="${tag.trim() + (iterStat.last ? '' : ', ')}"></span>
+                    </p>
+                </div>
+                <div th:if="${artwork.averageRed != null}">
+                    <p>Основной цвет:
+                        <span style="display:inline-block;width:16px;height:16px;border-radius:50%;margin-right:8px;border:1px solid #ccc;"
+                              th:style="'background-color:rgb(' + ${artwork.averageRed} + ',' + ${artwork.averageGreen} + ',' + ${artwork.averageBlue} + ');'"></span>
+                        <span th:text="'rgb(' + artwork.averageRed + ',' + artwork.averageGreen + ',' + artwork.averageBlue + ')' "></span>
+                    </p>
+                </div>
                 <p th:text="${artwork.likes} + ' лайков'"></p>
                 <div th:if="${isAdmin and artwork.complaintCount > 0}" class="alert alert-danger" style="margin: 10px 0;">
                     На публикацию пожаловались: <strong th:text="${artwork.complaintCount}"></strong>
@@ -130,6 +143,7 @@
                     <img th:src="@{'/uploads/' + ${#strings.replace(similar.imagePath, ' ', '%20')}}"/>
                     <h3 th:text="${similar.title}"></h3>
                 </a>
+                <p class="match-percentage" th:if="${similar.matchPercentage != null}">Совпадение: <span th:text="${similar.matchPercentage} + '%'">0%</span></p>
                 <p>Автор:
                     <span th:if="${similar.user != null}" th:text="${similar.user.username}"></span>
                 </p>
