@@ -3,6 +3,8 @@ package com.example.vag.service;
 import com.example.vag.dto.ImageAnalysisResult;
 import com.example.vag.service.impl.YandexVisionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -18,6 +20,7 @@ import java.util.stream.Collectors;
 @Service
 public class ImageFeatureService {
 
+    private static final Logger log = LoggerFactory.getLogger(ImageFeatureService.class);
     private final YandexVisionService visionService;
     private final ObjectMapper objectMapper;
 
@@ -86,9 +89,12 @@ public class ImageFeatureService {
                     .collect(Collectors.toList());
             if (!normalized.isEmpty()) {
                 detectedObjects = String.join(",", normalized);
+                log.info("Yandex Vision tags normalized for image={}: {}", imageFile != null ? imageFile.getOriginalFilename() : "<unknown>", detectedObjects);
+            } else {
+                log.info("Yandex Vision не вернул теги для image={}", imageFile != null ? imageFile.getOriginalFilename() : "<unknown>");
             }
         } catch (Exception e) {
-            // Если Yandex Vision недоступен или выдал ошибку, оставляем detectedObjects пустым.
+            log.warn("Yandex Vision недоступен или выдал ошибку при анализе image={}: {}", imageFile != null ? imageFile.getOriginalFilename() : "<unknown>", e.getMessage());
         }
 
         return new ImageAnalysisResult(averageRed, averageGreen, averageBlue, histogramJson, detectedObjects);

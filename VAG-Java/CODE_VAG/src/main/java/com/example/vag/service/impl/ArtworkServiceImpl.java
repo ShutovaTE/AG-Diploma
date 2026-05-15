@@ -12,6 +12,8 @@ import com.example.vag.service.NotificationService;
 import com.example.vag.util.FileUploadUtil;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -37,6 +39,8 @@ import java.util.stream.Collectors;
  * сохранение, модерация, реакции пользователей и уведомления.
  */
 public class ArtworkServiceImpl implements ArtworkService {
+
+    private static final Logger log = LoggerFactory.getLogger(ArtworkServiceImpl.class);
 
     private final ArtworkRepository artworkRepository;
     private final CategoryRepository categoryRepository;
@@ -313,6 +317,7 @@ public class ArtworkServiceImpl implements ArtworkService {
     }
 
     private void applyImageFeatures(Artwork artwork, org.springframework.web.multipart.MultipartFile imageFile) {
+        log.info("Начало анализа изображения для публикации id={} path={}", artwork.getId(), imageFile != null ? imageFile.getOriginalFilename() : "<unknown>");
         try {
             var analysis = imageFeatureService.analyze(imageFile);
             artwork.setAverageRed(analysis.getAverageRed());
@@ -320,13 +325,15 @@ public class ArtworkServiceImpl implements ArtworkService {
             artwork.setAverageBlue(analysis.getAverageBlue());
             artwork.setColorHistogram(analysis.getColorHistogram());
             artwork.setDetectedObjects(analysis.getDetectedObjects());
+            log.info("Анализ завершён для публикации id={}. detectedObjects={}, averageRGB=[{},{},{}]", artwork.getId(), analysis.getDetectedObjects(), analysis.getAverageRed(), analysis.getAverageGreen(), analysis.getAverageBlue());
         } catch (Exception e) {
-            System.err.println("Ошибка анализа изображения: " + e.getMessage());
+            log.error("Ошибка анализа изображения для публикации id={}: {}", artwork.getId(), e.getMessage(), e);
         }
     }
 
     @Override
     public void rescanArtworkFeatures(Long artworkId) {
+        log.info("Пересканирование изображения для публикации id={}", artworkId);
         Artwork artwork = artworkRepository.findById(artworkId)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid artwork ID"));
         if (artwork.getImagePath() == null || artwork.getImagePath().isBlank()) {
@@ -338,7 +345,9 @@ public class ArtworkServiceImpl implements ArtworkService {
             applyImageFeatures(artwork, multipartFile);
             artworkRepository.save(artwork);
             recommendationService.clearModelCache();
+            log.info("Пересканирование завершено для публикации id={}", artworkId);
         } catch (Exception e) {
+            log.error("Ошибка пересканирования изображения для публикации id={}: {}", artworkId, e.getMessage(), e);
             throw new RuntimeException("Ошибка пересканирования изображения: " + e.getMessage(), e);
         }
     }
@@ -346,8 +355,10 @@ public class ArtworkServiceImpl implements ArtworkService {
     @Override
     public void rescanAllArtworkFeatures() {
         List<Artwork> allArtworks = artworkRepository.findAll();
+        log.info("Начало пересканирования всех изображений: всего публикаций={}", allArtworks.size());
         for (Artwork artwork : allArtworks) {
             if (artwork.getImagePath() == null || artwork.getImagePath().isBlank()) {
+                log.debug("Пропущена публикация id={} из-за отсутствия пути к изображению", artwork.getId());
                 continue;
             }
             try {
@@ -355,11 +366,13 @@ public class ArtworkServiceImpl implements ArtworkService {
                 var multipartFile = fileUploadUtil.getAsMultipartFile(artwork.getImagePath(), fileName);
                 applyImageFeatures(artwork, multipartFile);
                 artworkRepository.save(artwork);
+                log.info("Пересканирование выполнено для публикации id={}", artwork.getId());
             } catch (Exception e) {
-                System.err.println("Ошибка при пересканировании публикации " + artwork.getId() + ": " + e.getMessage());
+                log.error("Ошибка при пересканировании публикации id={}: {}", artwork.getId(), e.getMessage(), e);
             }
         }
         recommendationService.clearModelCache();
+        log.info("Пересканирование всех изображений завершено");
     }
 
     @Override
