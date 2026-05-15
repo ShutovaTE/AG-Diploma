@@ -20,9 +20,12 @@ import com.example.vag.dto.ModerationResult;
 import javax.persistence.EntityNotFoundException;
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -54,402 +57,467 @@ public class ArtworkServiceImpl implements ArtworkService {
                               NotificationService notificationService, 
                               RecommendationService recommendationService,
                               ModerationService moderationService,
-<span class="nc" id="L57">                              ImageHashService imageHashService) {</span>
-<span class="nc" id="L58">        this.artworkRepository = artworkRepository;</span>
-<span class="nc" id="L59">        this.categoryRepository = categoryRepository;</span>
-<span class="nc" id="L60">        this.commentRepository = commentRepository;</span>
-<span class="nc" id="L61">        this.likeRepository = likeRepository;</span>
-<span class="nc" id="L62">        this.fileUploadUtil = fileUploadUtil;</span>
-<span class="nc" id="L63">        this.exhibitionService = exhibitionService;</span>
-<span class="nc" id="L64">        this.notificationService = notificationService;</span>
-<span class="nc" id="L65">        this.recommendationService = recommendationService;</span>
-<span class="nc" id="L66">        this.moderationService = moderationService;</span>
+<span class="nc" id="L60">                              ImageHashService imageHashService) {</span>
+<span class="nc" id="L61">        this.artworkRepository = artworkRepository;</span>
+<span class="nc" id="L62">        this.categoryRepository = categoryRepository;</span>
+<span class="nc" id="L63">        this.commentRepository = commentRepository;</span>
+<span class="nc" id="L64">        this.likeRepository = likeRepository;</span>
+<span class="nc" id="L65">        this.fileUploadUtil = fileUploadUtil;</span>
+<span class="nc" id="L66">        this.exhibitionService = exhibitionService;</span>
+<span class="nc" id="L67">        this.notificationService = notificationService;</span>
+<span class="nc" id="L68">        this.recommendationService = recommendationService;</span>
+<span class="nc" id="L69">        this.moderationService = moderationService;</span>
 
-<span class="nc" id="L68">        this.imageHashService = imageHashService;</span>
-<span class="nc" id="L69">    }</span>
+<span class="nc" id="L71">        this.imageHashService = imageHashService;</span>
+<span class="nc" id="L72">    }</span>
 
     @Override
     public Artwork save(Artwork artwork) {
-<span class="nc" id="L73">        return artworkRepository.save(artwork);</span>
+<span class="nc" id="L76">        return artworkRepository.save(artwork);</span>
     }
 
     @Override
     public Artwork create(Artwork artwork, MultipartFile imageFile, User user) throws IOException {
-<span class="nc" id="L78">        ModerationResult moderationResult = moderationService.moderateImage(imageFile, null);</span>
+<span class="nc" id="L81">        ModerationResult moderationResult = moderationService.moderateImage(imageFile, null);</span>
 
-<span class="nc" id="L80">        List&lt;Category&gt; categories = categoryRepository.findAllByIds(artwork.getCategoryIds());</span>
-<span class="nc" id="L81">        artwork.setCategories(new HashSet&lt;&gt;(categories));</span>
+<span class="nc" id="L83">        List&lt;Category&gt; categories = categoryRepository.findAllByIds(artwork.getCategoryIds());</span>
+<span class="nc" id="L84">        artwork.setCategories(new HashSet&lt;&gt;(categories));</span>
 
-<span class="nc" id="L83">        String originalFileName = StringUtils.cleanPath(imageFile.getOriginalFilename());</span>
-<span class="nc" id="L84">        String safeFileName = originalFileName</span>
-<span class="nc" id="L85">                .replace(&quot; &quot;, &quot;_&quot;)</span>
-<span class="nc" id="L86">                .replaceAll(&quot;[^a-zA-Z0-9._-]&quot;, &quot;&quot;);</span>
+<span class="nc" id="L86">        String originalFileName = StringUtils.cleanPath(imageFile.getOriginalFilename());</span>
+<span class="nc" id="L87">        String safeFileName = originalFileName</span>
+<span class="nc" id="L88">                .replace(&quot; &quot;, &quot;_&quot;)</span>
+<span class="nc" id="L89">                .replaceAll(&quot;[^a-zA-Z0-9._-]&quot;, &quot;&quot;);</span>
 
-<span class="nc" id="L88">        String relativePath = &quot;artwork-images/&quot; + user.getId() + &quot;/&quot; + safeFileName;</span>
-<span class="nc" id="L89">        artwork.setImagePath(relativePath);</span>
+<span class="nc" id="L91">        String relativePath = &quot;artwork-images/&quot; + user.getId() + &quot;/&quot; + safeFileName;</span>
+<span class="nc" id="L92">        artwork.setImagePath(relativePath);</span>
 
-<span class="nc" id="L91">        fileUploadUtil.saveFile(user.getId(), safeFileName, imageFile);</span>
+<span class="nc" id="L94">        fileUploadUtil.saveFile(user.getId(), safeFileName, imageFile);</span>
 
-<span class="nc" id="L93">        artwork.setDateCreation(LocalDate.now());</span>
-<span class="nc" id="L94">        artwork.setUser(user);</span>
-<span class="nc" id="L95">        artwork.setLikes(0);</span>
-<span class="nc" id="L96">        artwork.setViews(0);</span>
+<span class="nc" id="L96">        artwork.setDateCreation(LocalDate.now());</span>
+<span class="nc" id="L97">        artwork.setUser(user);</span>
+<span class="nc" id="L98">        artwork.setLikes(0);</span>
+<span class="nc" id="L99">        artwork.setViews(0);</span>
 
         // Сохраняем отчёт ИИ
-<span class="nc" id="L99">        artwork.setAiReport(moderationResult.getAiReport());</span>
+<span class="nc" id="L102">        artwork.setAiReport(moderationResult.getAiReport());</span>
 
         // Сохраняем ID похожей работы
-<span class="nc" id="L102">        artwork.setSimilarArtworkId(moderationResult.getSimilarArtworkId());</span>
-<span class="nc" id="L103">        artwork.setSimilarArtworkTitle(moderationResult.getSimilarArtworkTitle());</span>
+<span class="nc" id="L105">        artwork.setSimilarArtworkId(moderationResult.getSimilarArtworkId());</span>
+<span class="nc" id="L106">        artwork.setSimilarArtworkTitle(moderationResult.getSimilarArtworkTitle());</span>
 
         // Формируем причину для уведомления (чистый текст) и для админ-панели (HTML)
-<span class="nc" id="L106">        String reasonForUser = null;      // для уведомлений — без HTML</span>
-<span class="nc" id="L107">        String reasonForAdmin = null;     // для админ-панели — с HTML-ссылкой</span>
+<span class="nc" id="L109">        String reasonForUser = null;      // для уведомлений — без HTML</span>
+<span class="nc" id="L110">        String reasonForAdmin = null;     // для админ-панели — с HTML-ссылкой</span>
 
-<span class="nc bnc" id="L109" title="All 2 branches missed.">        if (!moderationResult.isApproved()) {</span>
-<span class="nc bnc" id="L110" title="All 2 branches missed.">            if (moderationResult.isNeedsManualReview()) {</span>
-<span class="nc" id="L111">                artwork.setStatus(Artwork.ArtworkStatus.PENDING.name());</span>
+<span class="nc bnc" id="L112" title="All 2 branches missed.">        if (!moderationResult.isApproved()) {</span>
+<span class="nc bnc" id="L113" title="All 2 branches missed.">            if (moderationResult.isNeedsManualReview()) {</span>
+<span class="nc" id="L114">                artwork.setStatus(Artwork.ArtworkStatus.PENDING.name());</span>
 
-<span class="nc" id="L113">                reasonForUser = moderationResult.getManualReviewReason();           // чистый текст</span>
-<span class="nc" id="L114">                reasonForAdmin = moderationResult.getManualReviewReasonHtml();      // HTML с ссылкой</span>
+<span class="nc" id="L116">                reasonForUser = moderationResult.getManualReviewReason();           // чистый текст</span>
+<span class="nc" id="L117">                reasonForAdmin = moderationResult.getManualReviewReasonHtml();      // HTML с ссылкой</span>
 
-<span class="nc bnc" id="L116" title="All 2 branches missed.">                artwork.setRejectionReason(reasonForAdmin != null ? reasonForAdmin : reasonForUser);</span>
+<span class="nc bnc" id="L119" title="All 2 branches missed.">                artwork.setRejectionReason(reasonForAdmin != null ? reasonForAdmin : reasonForUser);</span>
             } else {
-<span class="nc" id="L118">                artwork.setStatus(Artwork.ArtworkStatus.REJECTED.name());</span>
+<span class="nc" id="L121">                artwork.setStatus(Artwork.ArtworkStatus.REJECTED.name());</span>
 
-<span class="nc" id="L120">                reasonForUser = moderationResult.getRejectionReason();              // чистый текст</span>
-<span class="nc" id="L121">                reasonForAdmin = moderationResult.getRejectionReasonHtml();         // HTML с ссылкой</span>
+<span class="nc" id="L123">                reasonForUser = moderationResult.getRejectionReason();              // чистый текст</span>
+<span class="nc" id="L124">                reasonForAdmin = moderationResult.getRejectionReasonHtml();         // HTML с ссылкой</span>
 
-<span class="nc bnc" id="L123" title="All 2 branches missed.">                artwork.setRejectionReason(reasonForAdmin != null ? reasonForAdmin : reasonForUser);</span>
+<span class="nc bnc" id="L126" title="All 2 branches missed.">                artwork.setRejectionReason(reasonForAdmin != null ? reasonForAdmin : reasonForUser);</span>
             }
         } else {
-<span class="nc" id="L126">            artwork.setStatus(Artwork.ArtworkStatus.APPROVED.name());</span>
+<span class="nc" id="L129">            artwork.setStatus(Artwork.ArtworkStatus.APPROVED.name());</span>
         }
 
-<span class="nc" id="L129">        Artwork saved = artworkRepository.save(artwork);</span>
+<span class="nc" id="L132">        Artwork saved = artworkRepository.save(artwork);</span>
 
         // Сохраняем хеш
-<span class="nc bnc" id="L132" title="All 2 branches missed.">        if (!Artwork.ArtworkStatus.REJECTED.name().equals(saved.getStatus())) {</span>
+<span class="nc bnc" id="L135" title="All 2 branches missed.">        if (!Artwork.ArtworkStatus.REJECTED.name().equals(saved.getStatus())) {</span>
             try {
-<span class="nc" id="L134">                imageHashService.saveHash(saved, imageFile);</span>
-<span class="nc" id="L135">            } catch (Exception e) {</span>
-<span class="nc" id="L136">                System.err.println(&quot;Не удалось сохранить хеш изображения: &quot; + e.getMessage());</span>
-<span class="nc" id="L137">            }</span>
+<span class="nc" id="L137">                imageHashService.saveHash(saved, imageFile);</span>
+<span class="nc" id="L138">            } catch (Exception e) {</span>
+<span class="nc" id="L139">                System.err.println(&quot;Не удалось сохранить хеш изображения: &quot; + e.getMessage());</span>
+<span class="nc" id="L140">            }</span>
         }
 
         // Уведомления — используем ЧИСТЫЙ ТЕКСТ (без HTML)
-<span class="nc bnc" id="L141" title="All 2 branches missed.">        if (Artwork.ArtworkStatus.APPROVED.name().equals(saved.getStatus())) {</span>
-<span class="nc" id="L142">            notificationService.create(user,</span>
-<span class="nc" id="L143">                    &quot;Ваша публикация \&quot;&quot; + saved.getTitle() + &quot;\&quot; прошла проверку и опубликована.&quot;,</span>
-<span class="nc" id="L144">                    &quot;/artwork/details/&quot; + saved.getId());</span>
-<span class="nc bnc" id="L145" title="All 2 branches missed.">        } else if (Artwork.ArtworkStatus.REJECTED.name().equals(saved.getStatus())) {</span>
-<span class="nc" id="L146">            notificationService.create(user,</span>
-<span class="nc" id="L147">                    &quot;Ваша публикация \&quot;&quot; + saved.getTitle() + &quot;\&quot; отклонена: &quot; +</span>
-<span class="nc bnc" id="L148" title="All 2 branches missed.">                            (reasonForUser != null ? reasonForUser : saved.getRejectionReason()),</span>
-<span class="nc" id="L149">                    &quot;/artwork/details/&quot; + saved.getId());</span>
+<span class="nc bnc" id="L144" title="All 2 branches missed.">        if (Artwork.ArtworkStatus.APPROVED.name().equals(saved.getStatus())) {</span>
+<span class="nc" id="L145">            notificationService.create(user,</span>
+<span class="nc" id="L146">                    &quot;Ваша публикация \&quot;&quot; + saved.getTitle() + &quot;\&quot; прошла проверку и опубликована.&quot;,</span>
+<span class="nc" id="L147">                    &quot;/artwork/details/&quot; + saved.getId());</span>
+<span class="nc bnc" id="L148" title="All 2 branches missed.">        } else if (Artwork.ArtworkStatus.REJECTED.name().equals(saved.getStatus())) {</span>
+<span class="nc" id="L149">            notificationService.create(user,</span>
+<span class="nc" id="L150">                    &quot;Ваша публикация \&quot;&quot; + saved.getTitle() + &quot;\&quot; отклонена: &quot; +</span>
+<span class="nc bnc" id="L151" title="All 2 branches missed.">                            (reasonForUser != null ? reasonForUser : saved.getRejectionReason()),</span>
+<span class="nc" id="L152">                    &quot;/artwork/details/&quot; + saved.getId());</span>
         } else {
-<span class="nc" id="L151">            notificationService.create(user,</span>
-<span class="nc" id="L152">                    &quot;Ваша публикация \&quot;&quot; + saved.getTitle() + &quot;\&quot; отправлена на модерацию.&quot;,</span>
-<span class="nc" id="L153">                    &quot;/artwork/details/&quot; + saved.getId());</span>
+<span class="nc" id="L154">            notificationService.create(user,</span>
+<span class="nc" id="L155">                    &quot;Ваша публикация \&quot;&quot; + saved.getTitle() + &quot;\&quot; отправлена на модерацию.&quot;,</span>
+<span class="nc" id="L156">                    &quot;/artwork/details/&quot; + saved.getId());</span>
         }
 
-<span class="nc" id="L156">        recommendationService.clearModelCache();</span>
-<span class="nc" id="L157">        return saved;</span>
+<span class="nc" id="L159">        recommendationService.clearModelCache();</span>
+<span class="nc" id="L160">        return saved;</span>
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page&lt;Artwork&gt; findPaginatedApprovedArtworks(Pageable pageable) {
-<span class="nc" id="L163">        return artworkRepository.findApprovedArtworks(pageable);</span>
+<span class="nc" id="L166">        return artworkRepository.findApprovedArtworks(pageable);</span>
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page&lt;Artwork&gt; findPaginatedApprovedArtworksByLikes(Pageable pageable) {
-<span class="nc" id="L169">        return artworkRepository.findApprovedArtworksByLikes(pageable);</span>
+<span class="nc" id="L172">        return artworkRepository.findApprovedArtworksByLikes(pageable);</span>
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page&lt;Artwork&gt; findPaginatedApprovedArtworksByDate(Pageable pageable) {
-<span class="nc" id="L175">        return artworkRepository.findApprovedArtworksByDate(pageable);</span>
+<span class="nc" id="L178">        return artworkRepository.findApprovedArtworksByDate(pageable);</span>
     }
 
     @Override
     @Transactional(readOnly = true)
     public List&lt;com.example.vag.recommendation.dto.RecommendationDTO&gt; getRecommendationsForUser(Long userId) {
-<span class="nc" id="L181">        return recommendationService.getRecommendationsForUser(userId);</span>
+<span class="nc" id="L184">        return recommendationService.getRecommendationsForUser(userId);</span>
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List&lt;Artwork&gt; findSimilarApprovedArtworks(Artwork artwork, int limit) {
+<span class="nc bnc" id="L190" title="All 4 branches missed.">        if (artwork == null || limit &lt;= 0) {</span>
+<span class="nc" id="L191">            return Collections.emptyList();</span>
+        }
+
+<span class="nc bnc" id="L194" title="All 2 branches missed.">        Set&lt;Long&gt; currentCategoryIds = artwork.getCategories() == null ?</span>
+<span class="nc" id="L195">                Collections.emptySet() : artwork.getCategories().stream()</span>
+<span class="nc" id="L196">                .map(category -&gt; category.getId())</span>
+<span class="nc" id="L197">                .filter(Objects::nonNull)</span>
+<span class="nc" id="L198">                .collect(Collectors.toSet());</span>
+
+<span class="nc bnc" id="L200" title="All 2 branches missed.">        Long currentAuthorId = artwork.getUser() != null ? artwork.getUser().getId() : null;</span>
+<span class="nc" id="L201">        List&lt;Artwork&gt; candidates = artworkRepository.findApprovedArtworksExcept(artwork.getId());</span>
+<span class="nc bnc" id="L202" title="All 2 branches missed.">        if (candidates.isEmpty()) {</span>
+<span class="nc" id="L203">            return Collections.emptyList();</span>
+        }
+
+<span class="nc" id="L206">        double maxLikes = candidates.stream()</span>
+<span class="nc" id="L207">                .mapToDouble(art -&gt; art.getLikes())</span>
+<span class="nc" id="L208">                .max()</span>
+<span class="nc" id="L209">                .orElse(1.0);</span>
+
+<span class="nc" id="L211">        List&lt;Artwork&gt; ranked = candidates.stream()</span>
+<span class="nc" id="L212">                .sorted((a, b) -&gt; {</span>
+<span class="nc" id="L213">                    double scoreA = calculateSimilarityScore(artwork, currentCategoryIds, currentAuthorId, a, maxLikes);</span>
+<span class="nc" id="L214">                    double scoreB = calculateSimilarityScore(artwork, currentCategoryIds, currentAuthorId, b, maxLikes);</span>
+<span class="nc" id="L215">                    return Double.compare(scoreB, scoreA);</span>
+                })
+<span class="nc" id="L217">                .limit(Math.max(limit * 3, 24))</span>
+<span class="nc" id="L218">                .collect(Collectors.toList());</span>
+
+<span class="nc" id="L220">        Collections.shuffle(ranked, new Random());</span>
+<span class="nc" id="L221">        return ranked.subList(0, Math.min(limit, ranked.size()));</span>
+    }
+
+    private double calculateSimilarityScore(Artwork source,
+                                            Set&lt;Long&gt; sourceCategoryIds,
+                                            Long sourceAuthorId,
+                                            Artwork candidate,
+                                            double maxLikes) {
+<span class="nc bnc" id="L229" title="All 2 branches missed.">        if (candidate == null) {</span>
+<span class="nc" id="L230">            return 0.0;</span>
+        }
+
+<span class="nc bnc" id="L233" title="All 2 branches missed.">        Set&lt;Long&gt; candidateCategoryIds = candidate.getCategories() == null ?</span>
+<span class="nc" id="L234">                Collections.emptySet() : candidate.getCategories().stream()</span>
+<span class="nc" id="L235">                .map(category -&gt; category.getId())</span>
+<span class="nc" id="L236">                .filter(Objects::nonNull)</span>
+<span class="nc" id="L237">                .collect(Collectors.toSet());</span>
+
+<span class="nc" id="L239">        long categoryOverlap = candidateCategoryIds.stream()</span>
+<span class="nc" id="L240">                .filter(sourceCategoryIds::contains)</span>
+<span class="nc" id="L241">                .count();</span>
+
+<span class="nc bnc" id="L243" title="All 2 branches missed.">        double categoryScore = sourceCategoryIds.isEmpty() ? 0.0 : (double) categoryOverlap / sourceCategoryIds.size();</span>
+<span class="nc bnc" id="L244" title="All 6 branches missed.">        double authorScore = sourceAuthorId != null &amp;&amp; candidate.getUser() != null &amp;&amp; Objects.equals(candidate.getUser().getId(), sourceAuthorId)</span>
+<span class="nc" id="L245">                ? 1.0 : 0.0;</span>
+<span class="nc" id="L246">        double popularityScore = candidate.getLikes() / maxLikes;</span>
+
+        // Основной вес даётся категориям, меньше — автору, немного — популярности.
+<span class="nc" id="L249">        return categoryScore * 0.78 + authorScore * 0.18 + popularityScore * 0.04;</span>
     }
 
     @Override
     public Page&lt;Artwork&gt; findByCategoryId(Long categoryId, Pageable pageable) {
-<span class="nc" id="L186">        return artworkRepository.findByCategoryId(categoryId, pageable);</span>
+<span class="nc" id="L254">        return artworkRepository.findByCategoryId(categoryId, pageable);</span>
     }
 
     @Override
     public List&lt;Artwork&gt; findAll() {
-<span class="nc" id="L191">        return artworkRepository.findAll();</span>
+<span class="nc" id="L259">        return artworkRepository.findAll();</span>
     }
 
     @Override
     @Transactional(readOnly = true)
     public List&lt;Artwork&gt; findByStatus(String status) {
-<span class="nc" id="L197">        return artworkRepository.findByStatus(status);</span>
+<span class="nc" id="L265">        return artworkRepository.findByStatus(status);</span>
     }
 
 
 
     @Override
     public List&lt;Artwork&gt; findByUserWithDetails(User user) {
-<span class="nc" id="L204">        return artworkRepository.findByUserWithDetails(user.getId());</span>
+<span class="nc" id="L272">        return artworkRepository.findByUserWithDetails(user.getId());</span>
     }
 
     @Override
     public List&lt;Artwork&gt; findByExhibitionId(Long exhibitionId) {
-<span class="nc" id="L209">        return artworkRepository.findByExhibitionId(exhibitionId);</span>
+<span class="nc" id="L277">        return artworkRepository.findByExhibitionId(exhibitionId);</span>
     }
 
     @Override
     public Optional&lt;Artwork&gt; findById(Long id) {
-<span class="nc" id="L214">        return artworkRepository.findById(id);</span>
+<span class="nc" id="L282">        return artworkRepository.findById(id);</span>
     }
 
     @Override
     public void delete(Artwork artwork) {
         try {
-<span class="nc" id="L220">            imageHashService.deleteByArtworkId(artwork.getId());</span>
-<span class="nc" id="L221">        } catch (Exception e) {</span>
-<span class="nc" id="L222">            System.err.println(&quot;Ошибка при удалении хеша: &quot; + e.getMessage());</span>
-<span class="nc" id="L223">        }</span>
+<span class="nc" id="L288">            imageHashService.deleteByArtworkId(artwork.getId());</span>
+<span class="nc" id="L289">        } catch (Exception e) {</span>
+<span class="nc" id="L290">            System.err.println(&quot;Ошибка при удалении хеша: &quot; + e.getMessage());</span>
+<span class="nc" id="L291">        }</span>
 
-<span class="nc" id="L225">        Artwork artworkWithExhibitions = artworkRepository.findById(artwork.getId())</span>
-<span class="nc" id="L226">                .orElseThrow(() -&gt; new IllegalArgumentException(&quot;Произведение искусства не найдено&quot;));</span>
+<span class="nc" id="L293">        Artwork artworkWithExhibitions = artworkRepository.findById(artwork.getId())</span>
+<span class="nc" id="L294">                .orElseThrow(() -&gt; new IllegalArgumentException(&quot;Произведение искусства не найдено&quot;));</span>
 
-<span class="nc" id="L228">        Set&lt;Exhibition&gt; exhibitions = new HashSet&lt;&gt;(artworkWithExhibitions.getExhibitions());</span>
-<span class="nc bnc" id="L229" title="All 2 branches missed.">        for (Exhibition exhibition : exhibitions) {</span>
-<span class="nc" id="L230">            exhibitionService.removeArtworkFromExhibition(exhibition.getId(), artwork.getId());</span>
-<span class="nc" id="L231">        }</span>
+<span class="nc" id="L296">        Set&lt;Exhibition&gt; exhibitions = new HashSet&lt;&gt;(artworkWithExhibitions.getExhibitions());</span>
+<span class="nc bnc" id="L297" title="All 2 branches missed.">        for (Exhibition exhibition : exhibitions) {</span>
+<span class="nc" id="L298">            exhibitionService.removeArtworkFromExhibition(exhibition.getId(), artwork.getId());</span>
+<span class="nc" id="L299">        }</span>
 
-<span class="nc" id="L233">        String imagePath = artworkWithExhibitions.getImagePath();</span>
-<span class="nc bnc" id="L234" title="All 4 branches missed.">        if (imagePath != null &amp;&amp; !imagePath.isBlank()) {</span>
-<span class="nc" id="L235">            long referenceCount = artworkRepository.countByImagePath(imagePath);</span>
-<span class="nc bnc" id="L236" title="All 2 branches missed.">            if (referenceCount &lt;= 1) {</span>
+<span class="nc" id="L301">        String imagePath = artworkWithExhibitions.getImagePath();</span>
+<span class="nc bnc" id="L302" title="All 4 branches missed.">        if (imagePath != null &amp;&amp; !imagePath.isBlank()) {</span>
+<span class="nc" id="L303">            long referenceCount = artworkRepository.countByImagePath(imagePath);</span>
+<span class="nc bnc" id="L304" title="All 2 branches missed.">            if (referenceCount &lt;= 1) {</span>
                 try {
-<span class="nc" id="L238">                    fileUploadUtil.deleteFile(imagePath);</span>
-<span class="nc" id="L239">                    System.out.println(&quot;Файл удалён из MinIO: &quot; + imagePath);</span>
-<span class="nc" id="L240">                } catch (IOException e) {</span>
-<span class="nc" id="L241">                    throw new RuntimeException(&quot;Ошибка удаления файла из MinIO: &quot; + imagePath, e);</span>
-<span class="nc" id="L242">                }</span>
+<span class="nc" id="L306">                    fileUploadUtil.deleteFile(imagePath);</span>
+<span class="nc" id="L307">                    System.out.println(&quot;Файл удалён из MinIO: &quot; + imagePath);</span>
+<span class="nc" id="L308">                } catch (IOException e) {</span>
+<span class="nc" id="L309">                    throw new RuntimeException(&quot;Ошибка удаления файла из MinIO: &quot; + imagePath, e);</span>
+<span class="nc" id="L310">                }</span>
             } else {
-<span class="nc" id="L244">                System.out.println(&quot; Файл не удалён, на него ссылаются &quot; + referenceCount + &quot; публикаций: &quot; + imagePath);</span>
+<span class="nc" id="L312">                System.out.println(&quot; Файл не удалён, на него ссылаются &quot; + referenceCount + &quot; публикаций: &quot; + imagePath);</span>
             }
         }
 
-<span class="nc" id="L248">        artworkRepository.delete(artworkWithExhibitions);</span>
+<span class="nc" id="L316">        artworkRepository.delete(artworkWithExhibitions);</span>
 
-<span class="nc" id="L250">        recommendationService.clearModelCache();</span>
-<span class="nc" id="L251">    }</span>
+<span class="nc" id="L318">        recommendationService.clearModelCache();</span>
+<span class="nc" id="L319">    }</span>
 
     @Override
     public void approveArtwork(Long artworkId) {
-<span class="nc" id="L255">        Artwork artwork = artworkRepository.findById(artworkId)</span>
-<span class="nc" id="L256">                .orElseThrow(() -&gt; new IllegalArgumentException(&quot;Invalid artwork ID&quot;));</span>
-<span class="nc" id="L257">        artwork.setStatus(Artwork.ArtworkStatus.APPROVED.name());</span>
-<span class="nc" id="L258">        artwork.setRejectionReason(null);</span>
-<span class="nc" id="L259">        artworkRepository.save(artwork);</span>
-<span class="nc" id="L260">        notificationService.create(</span>
-<span class="nc" id="L261">                artwork.getUser(),</span>
-<span class="nc" id="L262">                &quot;Ваша публикация \&quot;&quot; + artwork.getTitle() + &quot;\&quot; была одобрена.&quot;,</span>
-<span class="nc" id="L263">                &quot;/artwork/details/&quot; + artwork.getId()</span>
+<span class="nc" id="L323">        Artwork artwork = artworkRepository.findById(artworkId)</span>
+<span class="nc" id="L324">                .orElseThrow(() -&gt; new IllegalArgumentException(&quot;Invalid artwork ID&quot;));</span>
+<span class="nc" id="L325">        artwork.setStatus(Artwork.ArtworkStatus.APPROVED.name());</span>
+<span class="nc" id="L326">        artwork.setRejectionReason(null);</span>
+<span class="nc" id="L327">        artworkRepository.save(artwork);</span>
+<span class="nc" id="L328">        notificationService.create(</span>
+<span class="nc" id="L329">                artwork.getUser(),</span>
+<span class="nc" id="L330">                &quot;Ваша публикация \&quot;&quot; + artwork.getTitle() + &quot;\&quot; была одобрена.&quot;,</span>
+<span class="nc" id="L331">                &quot;/artwork/details/&quot; + artwork.getId()</span>
         );
-<span class="nc" id="L265">        recommendationService.clearModelCache();</span>
-<span class="nc" id="L266">    }</span>
+<span class="nc" id="L333">        recommendationService.clearModelCache();</span>
+<span class="nc" id="L334">    }</span>
 
     @Override
     public void rejectArtwork(Long artworkId, String rejectionReason) {
-<span class="nc" id="L270">        Artwork artwork = artworkRepository.findById(artworkId)</span>
-<span class="nc" id="L271">                .orElseThrow(() -&gt; new IllegalArgumentException(&quot;Invalid artwork ID&quot;));</span>
-<span class="nc" id="L272">        artwork.setStatus(Artwork.ArtworkStatus.REJECTED.name());</span>
-<span class="nc" id="L273">        artwork.setRejectionReason(rejectionReason);</span>
-<span class="nc" id="L274">        artworkRepository.save(artwork);</span>
-<span class="nc" id="L275">        notificationService.create(</span>
-<span class="nc" id="L276">                artwork.getUser(),</span>
-<span class="nc" id="L277">                &quot;Ваша публикация \&quot;&quot; + artwork.getTitle() + &quot;\&quot; была отклонена. Причина: &quot; + rejectionReason,</span>
-<span class="nc" id="L278">                &quot;/artwork/details/&quot; + artwork.getId()</span>
+<span class="nc" id="L338">        Artwork artwork = artworkRepository.findById(artworkId)</span>
+<span class="nc" id="L339">                .orElseThrow(() -&gt; new IllegalArgumentException(&quot;Invalid artwork ID&quot;));</span>
+<span class="nc" id="L340">        artwork.setStatus(Artwork.ArtworkStatus.REJECTED.name());</span>
+<span class="nc" id="L341">        artwork.setRejectionReason(rejectionReason);</span>
+<span class="nc" id="L342">        artworkRepository.save(artwork);</span>
+<span class="nc" id="L343">        notificationService.create(</span>
+<span class="nc" id="L344">                artwork.getUser(),</span>
+<span class="nc" id="L345">                &quot;Ваша публикация \&quot;&quot; + artwork.getTitle() + &quot;\&quot; была отклонена. Причина: &quot; + rejectionReason,</span>
+<span class="nc" id="L346">                &quot;/artwork/details/&quot; + artwork.getId()</span>
         );
-<span class="nc" id="L280">    }</span>
+<span class="nc" id="L348">    }</span>
 
 
 
     @Override
     public void likeArtwork(Long artworkId, User user) {
-<span class="nc" id="L286">        Artwork artwork = artworkRepository.findById(artworkId)</span>
-<span class="nc" id="L287">                .orElseThrow(() -&gt; new IllegalArgumentException(&quot;Invalid artwork ID&quot;));</span>
+<span class="nc" id="L354">        Artwork artwork = artworkRepository.findById(artworkId)</span>
+<span class="nc" id="L355">                .orElseThrow(() -&gt; new IllegalArgumentException(&quot;Invalid artwork ID&quot;));</span>
 
-<span class="nc bnc" id="L289" title="All 2 branches missed.">        if (!likeRepository.existsByArtworkAndUser(artwork, user)) {</span>
-<span class="nc" id="L290">            Like like = new Like();</span>
-<span class="nc" id="L291">            like.setArtwork(artwork);</span>
-<span class="nc" id="L292">            like.setUser(user);</span>
-<span class="nc" id="L293">            likeRepository.save(like);</span>
-<span class="nc" id="L294">            artwork.setLikes(artwork.getLikes() + 1);</span>
-<span class="nc" id="L295">            artworkRepository.save(artwork);</span>
-<span class="nc" id="L296">            notifyArtworkAuthorAboutLike(artwork, user);</span>
+<span class="nc bnc" id="L357" title="All 2 branches missed.">        if (!likeRepository.existsByArtworkAndUser(artwork, user)) {</span>
+<span class="nc" id="L358">            Like like = new Like();</span>
+<span class="nc" id="L359">            like.setArtwork(artwork);</span>
+<span class="nc" id="L360">            like.setUser(user);</span>
+<span class="nc" id="L361">            likeRepository.save(like);</span>
+<span class="nc" id="L362">            artwork.setLikes(artwork.getLikes() + 1);</span>
+<span class="nc" id="L363">            artworkRepository.save(artwork);</span>
+<span class="nc" id="L364">            notifyArtworkAuthorAboutLike(artwork, user);</span>
         }
-<span class="nc" id="L298">        recommendationService.clearModelCache();</span>
-<span class="nc" id="L299">    }</span>
+<span class="nc" id="L366">        recommendationService.clearModelCache();</span>
+<span class="nc" id="L367">    }</span>
 
     @Override
     public long countApprovedArtworksByCategoryId(Long categoryId) {
-<span class="nc" id="L303">        return artworkRepository.countApprovedArtworksByCategoryId(categoryId);</span>
+<span class="nc" id="L371">        return artworkRepository.countApprovedArtworksByCategoryId(categoryId);</span>
     }
 
     @Override
     public void unlikeArtwork(Long artworkId, User user) {
-<span class="nc" id="L308">        Artwork artwork = artworkRepository.findById(artworkId)</span>
-<span class="nc" id="L309">                .orElseThrow(() -&gt; new IllegalArgumentException(&quot;Invalid artwork ID&quot;));</span>
+<span class="nc" id="L376">        Artwork artwork = artworkRepository.findById(artworkId)</span>
+<span class="nc" id="L377">                .orElseThrow(() -&gt; new IllegalArgumentException(&quot;Invalid artwork ID&quot;));</span>
 
-<span class="nc" id="L311">        likeRepository.findByArtworkAndUser(artwork, user).ifPresent(like -&gt; {</span>
-<span class="nc" id="L312">            likeRepository.delete(like);</span>
-<span class="nc" id="L313">            artwork.setLikes(artwork.getLikes() - 1);</span>
-<span class="nc" id="L314">            artworkRepository.save(artwork);</span>
-<span class="nc" id="L315">        });</span>
-<span class="nc" id="L316">        recommendationService.clearModelCache();</span>
-<span class="nc" id="L317">    }</span>
+<span class="nc" id="L379">        likeRepository.findByArtworkAndUser(artwork, user).ifPresent(like -&gt; {</span>
+<span class="nc" id="L380">            likeRepository.delete(like);</span>
+<span class="nc" id="L381">            artwork.setLikes(artwork.getLikes() - 1);</span>
+<span class="nc" id="L382">            artworkRepository.save(artwork);</span>
+<span class="nc" id="L383">        });</span>
+<span class="nc" id="L384">        recommendationService.clearModelCache();</span>
+<span class="nc" id="L385">    }</span>
 
     @Override
     public boolean isLikedByUser(Artwork artwork, User user) {
-<span class="nc" id="L321">        return likeRepository.existsByArtworkAndUser(artwork, user);</span>
+<span class="nc" id="L389">        return likeRepository.existsByArtworkAndUser(artwork, user);</span>
     }
 
     @Override
     public void addComment(Long artworkId, User user, String content) {
-<span class="nc" id="L326">        Artwork artwork = artworkRepository.findById(artworkId)</span>
-<span class="nc" id="L327">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Artwork not found&quot;));</span>
+<span class="nc" id="L394">        Artwork artwork = artworkRepository.findById(artworkId)</span>
+<span class="nc" id="L395">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Artwork not found&quot;));</span>
 
-<span class="nc" id="L329">        Comment comment = new Comment();</span>
-<span class="nc" id="L330">        comment.setContent(content);</span>
-<span class="nc" id="L331">        comment.setUser(user);</span>
-<span class="nc" id="L332">        comment.setArtwork(artwork);</span>
+<span class="nc" id="L397">        Comment comment = new Comment();</span>
+<span class="nc" id="L398">        comment.setContent(content);</span>
+<span class="nc" id="L399">        comment.setUser(user);</span>
+<span class="nc" id="L400">        comment.setArtwork(artwork);</span>
 
-<span class="nc" id="L334">        commentRepository.save(comment);</span>
-<span class="nc" id="L335">        notifyArtworkAuthorAboutComment(artwork, user, content);</span>
-<span class="nc" id="L336">        recommendationService.clearModelCache();</span>
-<span class="nc" id="L337">    }</span>
+<span class="nc" id="L402">        commentRepository.save(comment);</span>
+<span class="nc" id="L403">        notifyArtworkAuthorAboutComment(artwork, user, content);</span>
+<span class="nc" id="L404">        recommendationService.clearModelCache();</span>
+<span class="nc" id="L405">    }</span>
 
     @Override
     public void reportArtwork(Long artworkId, User reporter, String reason) {
-<span class="nc" id="L341">        Artwork artwork = artworkRepository.findById(artworkId)</span>
-<span class="nc" id="L342">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Artwork not found&quot;));</span>
+<span class="nc" id="L409">        Artwork artwork = artworkRepository.findById(artworkId)</span>
+<span class="nc" id="L410">                .orElseThrow(() -&gt; new EntityNotFoundException(&quot;Artwork not found&quot;));</span>
 
-<span class="nc" id="L344">        artwork.setComplaintCount(artwork.getComplaintCount() + 1);</span>
+<span class="nc" id="L412">        artwork.setComplaintCount(artwork.getComplaintCount() + 1);</span>
 
-<span class="nc bnc" id="L346" title="All 4 branches missed.">        if (reason != null &amp;&amp; !reason.trim().isEmpty()) {</span>
-<span class="nc" id="L347">            artwork.setLastComplaintReason(reason.trim());</span>
+<span class="nc bnc" id="L414" title="All 4 branches missed.">        if (reason != null &amp;&amp; !reason.trim().isEmpty()) {</span>
+<span class="nc" id="L415">            artwork.setLastComplaintReason(reason.trim());</span>
         }
 
-<span class="nc" id="L350">        artworkRepository.save(artwork);</span>
-<span class="nc" id="L351">    }</span>
+<span class="nc" id="L418">        artworkRepository.save(artwork);</span>
+<span class="nc" id="L419">    }</span>
 
     @Override
     public Artwork findByIdWithComments(Long id) {
-<span class="nc" id="L355">        Artwork artwork = artworkRepository.findByIdWithComments(id).orElseThrow();</span>
-<span class="nc" id="L356">        artworkRepository.findByIdWithCategories(id).ifPresent(a -&gt;</span>
-<span class="nc" id="L357">                artwork.setCategories(a.getCategories())</span>
+<span class="nc" id="L423">        Artwork artwork = artworkRepository.findByIdWithComments(id).orElseThrow();</span>
+<span class="nc" id="L424">        artworkRepository.findByIdWithCategories(id).ifPresent(a -&gt;</span>
+<span class="nc" id="L425">                artwork.setCategories(a.getCategories())</span>
         );
-<span class="nc" id="L359">        return artwork;</span>
+<span class="nc" id="L427">        return artwork;</span>
     }
 
     @Override
     public Page&lt;Artwork&gt; getApprovedArtworks(Pageable pageable) {
-<span class="nc" id="L364">        return artworkRepository.findApprovedArtworks(pageable);</span>
+<span class="nc" id="L432">        return artworkRepository.findApprovedArtworks(pageable);</span>
     }
 
     @Override
     public Optional&lt;Artwork&gt; findByIdWithCategories(Long id) {
-<span class="nc" id="L369">        return artworkRepository.findByIdWithCategories(id);</span>
+<span class="nc" id="L437">        return artworkRepository.findByIdWithCategories(id);</span>
     }
 
     @Override
     public Page&lt;Artwork&gt; findAll(Pageable pageable) {
-<span class="nc" id="L374">        return artworkRepository.findAll(pageable);</span>
+<span class="nc" id="L442">        return artworkRepository.findAll(pageable);</span>
     }
 
     @Override
     public Page&lt;Artwork&gt; findAllPaginated(Pageable pageable) {
-<span class="nc" id="L379">        return artworkRepository.findAllPaginated(pageable);</span>
+<span class="nc" id="L447">        return artworkRepository.findAllPaginated(pageable);</span>
     }
 
     @Override
     public Page&lt;Artwork&gt; findByStatus(String status, Pageable pageable) {
-<span class="nc" id="L384">        return artworkRepository.findByStatus(status, pageable);</span>
+<span class="nc" id="L452">        return artworkRepository.findByStatus(status, pageable);</span>
     }
 
     @Override
     public Page&lt;Artwork&gt; findByUser(User user, Pageable pageable) {
-<span class="nc" id="L389">        return artworkRepository.findByUser(user, pageable);</span>
+<span class="nc" id="L457">        return artworkRepository.findByUser(user, pageable);</span>
     }
 
     @Override
     public Page&lt;Artwork&gt; findByUserAndStatus(User user, String status, Pageable pageable) {
-<span class="nc" id="L394">        return artworkRepository.findByUserAndStatus(user, status, pageable);</span>
+<span class="nc" id="L462">        return artworkRepository.findByUserAndStatus(user, status, pageable);</span>
     }
     @Override
     public List&lt;Artwork&gt; findLikedArtworks(User user) {
-<span class="nc" id="L398">        List&lt;Like&gt; likes = likeRepository.findByUser(user);</span>
-<span class="nc" id="L399">        return likes.stream()</span>
-<span class="nc" id="L400">                .map(Like::getArtwork)</span>
-<span class="nc" id="L401">                .collect(Collectors.toList());</span>
+<span class="nc" id="L466">        List&lt;Like&gt; likes = likeRepository.findByUser(user);</span>
+<span class="nc" id="L467">        return likes.stream()</span>
+<span class="nc" id="L468">                .map(Like::getArtwork)</span>
+<span class="nc" id="L469">                .collect(Collectors.toList());</span>
     }
 
     @Override
     public Page&lt;Artwork&gt; findLikedArtworks(User user, Pageable pageable) {
-<span class="nc" id="L406">        Page&lt;Like&gt; likes = likeRepository.findByUserWithArtworkDetails(user, pageable);</span>
-<span class="nc" id="L407">        return likes.map(Like::getArtwork);</span>
+<span class="nc" id="L474">        Page&lt;Like&gt; likes = likeRepository.findByUserWithArtworkDetails(user, pageable);</span>
+<span class="nc" id="L475">        return likes.map(Like::getArtwork);</span>
     }
     @Override
     public Page&lt;Artwork&gt; findByExhibitionId(Long exhibitionId, Pageable pageable) {
-<span class="nc" id="L411">        return artworkRepository.findByExhibitionId(exhibitionId, pageable);</span>
+<span class="nc" id="L479">        return artworkRepository.findByExhibitionId(exhibitionId, pageable);</span>
     }
 
     private void notifyArtworkAuthorAboutLike(Artwork artwork, User actor) {
-<span class="nc" id="L415">        User author = artwork.getUser();</span>
-<span class="nc bnc" id="L416" title="All 6 branches missed.">        if (author == null || actor == null || author.getId().equals(actor.getId())) {</span>
-<span class="nc" id="L417">            return;</span>
+<span class="nc" id="L483">        User author = artwork.getUser();</span>
+<span class="nc bnc" id="L484" title="All 6 branches missed.">        if (author == null || actor == null || author.getId().equals(actor.getId())) {</span>
+<span class="nc" id="L485">            return;</span>
         }
-<span class="nc" id="L419">        notificationService.create(</span>
+<span class="nc" id="L487">        notificationService.create(</span>
                 author,
-<span class="nc" id="L421">                &quot;Пользователь &quot; + actor.getUsername() + &quot; поставил лайк вашей публикации \&quot;&quot; + artwork.getTitle() + &quot;\&quot;.&quot;,</span>
-<span class="nc" id="L422">                &quot;/artwork/details/&quot; + artwork.getId()</span>
+<span class="nc" id="L489">                &quot;Пользователь &quot; + actor.getUsername() + &quot; поставил лайк вашей публикации \&quot;&quot; + artwork.getTitle() + &quot;\&quot;.&quot;,</span>
+<span class="nc" id="L490">                &quot;/artwork/details/&quot; + artwork.getId()</span>
         );
-<span class="nc" id="L424">    }</span>
+<span class="nc" id="L492">    }</span>
 
     private void notifyArtworkAuthorAboutComment(Artwork artwork, User actor, String content) {
-<span class="nc" id="L427">        User author = artwork.getUser();</span>
-<span class="nc bnc" id="L428" title="All 6 branches missed.">        if (author == null || actor == null || author.getId().equals(actor.getId())) {</span>
-<span class="nc" id="L429">            return;</span>
+<span class="nc" id="L495">        User author = artwork.getUser();</span>
+<span class="nc bnc" id="L496" title="All 6 branches missed.">        if (author == null || actor == null || author.getId().equals(actor.getId())) {</span>
+<span class="nc" id="L497">            return;</span>
         }
-<span class="nc" id="L431">        String commentPreview = buildCommentPreview(content);</span>
-<span class="nc" id="L432">        notificationService.create(</span>
+<span class="nc" id="L499">        String commentPreview = buildCommentPreview(content);</span>
+<span class="nc" id="L500">        notificationService.create(</span>
                 author,
-<span class="nc" id="L434">                &quot;Пользователь &quot; + actor.getUsername() + &quot; прокомментировал вашу публикацию \&quot;&quot; + artwork.getTitle() + &quot;\&quot;: &quot; + commentPreview,</span>
-<span class="nc" id="L435">                &quot;/artwork/details/&quot; + artwork.getId()</span>
+<span class="nc" id="L502">                &quot;Пользователь &quot; + actor.getUsername() + &quot; прокомментировал вашу публикацию \&quot;&quot; + artwork.getTitle() + &quot;\&quot;: &quot; + commentPreview,</span>
+<span class="nc" id="L503">                &quot;/artwork/details/&quot; + artwork.getId()</span>
         );
-<span class="nc" id="L437">    }</span>
+<span class="nc" id="L505">    }</span>
 
     private String buildCommentPreview(String content) {
-<span class="nc bnc" id="L440" title="All 4 branches missed.">        if (content == null || content.isBlank()) {</span>
-<span class="nc" id="L441">            return &quot;\&quot;\&quot;&quot;;</span>
+<span class="nc bnc" id="L508" title="All 4 branches missed.">        if (content == null || content.isBlank()) {</span>
+<span class="nc" id="L509">            return &quot;\&quot;\&quot;&quot;;</span>
         }
-<span class="nc" id="L443">        String normalized = content.trim().replaceAll(&quot;\\s+&quot;, &quot; &quot;);</span>
-<span class="nc bnc" id="L444" title="All 2 branches missed.">        if (normalized.length() &lt;= 80) {</span>
-<span class="nc" id="L445">            return &quot;\&quot;&quot; + normalized + &quot;\&quot;&quot;;</span>
+<span class="nc" id="L511">        String normalized = content.trim().replaceAll(&quot;\\s+&quot;, &quot; &quot;);</span>
+<span class="nc bnc" id="L512" title="All 2 branches missed.">        if (normalized.length() &lt;= 80) {</span>
+<span class="nc" id="L513">            return &quot;\&quot;&quot; + normalized + &quot;\&quot;&quot;;</span>
         }
-<span class="nc" id="L447">        return &quot;\&quot;&quot; + normalized.substring(0, 80) + &quot;...\&quot;&quot;;</span>
+<span class="nc" id="L515">        return &quot;\&quot;&quot; + normalized.substring(0, 80) + &quot;...\&quot;&quot;;</span>
     }
 
     @Override
     public Page&lt;Artwork&gt; searchArtworksByTitle(String title, Pageable pageable) {
-<span class="nc" id="L452">        return artworkRepository.findByTitleContainingIgnoreCaseAndStatus(title, &quot;APPROVED&quot;, pageable);</span>
+<span class="nc" id="L520">        return artworkRepository.findByTitleContainingIgnoreCaseAndStatus(title, &quot;APPROVED&quot;, pageable);</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

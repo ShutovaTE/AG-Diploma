@@ -145,7 +145,10 @@ public class ArtworkController {
             return "redirect:/auth/access-denied";
         }
 
+        List<Artwork> similarArtworks = artworkService.findSimilarApprovedArtworks(artwork, 8);
+
         model.addAttribute("artwork", artwork);
+        model.addAttribute("similarArtworks", similarArtworks);
         model.addAttribute("isLiked", currentUser != null && artworkService.isLikedByUser(artwork, currentUser));
         model.addAttribute("isAuthenticated", currentUser != null);
         model.addAttribute("isAdmin", isAdmin);

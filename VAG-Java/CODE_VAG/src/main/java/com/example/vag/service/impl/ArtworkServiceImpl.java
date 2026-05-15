@@ -20,9 +20,12 @@ import com.example.vag.dto.ModerationResult;
 import javax.persistence.EntityNotFoundException;
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -179,6 +182,71 @@ public class ArtworkServiceImpl implements ArtworkService {
     @Transactional(readOnly = true)
     public List<com.example.vag.recommendation.dto.RecommendationDTO> getRecommendationsForUser(Long userId) {
         return recommendationService.getRecommendationsForUser(userId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Artwork> findSimilarApprovedArtworks(Artwork artwork, int limit) {
+        if (artwork == null || limit <= 0) {
+            return Collections.emptyList();
+        }
+
+        Set<Long> currentCategoryIds = artwork.getCategories() == null ?
+                Collections.emptySet() : artwork.getCategories().stream()
+                .map(category -> category.getId())
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        Long currentAuthorId = artwork.getUser() != null ? artwork.getUser().getId() : null;
+        List<Artwork> candidates = artworkRepository.findApprovedArtworksExcept(artwork.getId());
+        if (candidates.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        double maxLikes = candidates.stream()
+                .mapToDouble(art -> art.getLikes())
+                .max()
+                .orElse(1.0);
+
+        List<Artwork> ranked = candidates.stream()
+                .sorted((a, b) -> {
+                    double scoreA = calculateSimilarityScore(artwork, currentCategoryIds, currentAuthorId, a, maxLikes);
+                    double scoreB = calculateSimilarityScore(artwork, currentCategoryIds, currentAuthorId, b, maxLikes);
+                    return Double.compare(scoreB, scoreA);
+                })
+                .limit(Math.max(limit * 3, 24))
+                .collect(Collectors.toList());
+
+        Collections.shuffle(ranked, new Random());
+        return ranked.subList(0, Math.min(limit, ranked.size()));
+    }
+
+    private double calculateSimilarityScore(Artwork source,
+                                            Set<Long> sourceCategoryIds,
+                                            Long sourceAuthorId,
+                                            Artwork candidate,
+                                            double maxLikes) {
+        if (candidate == null) {
+            return 0.0;
+        }
+
+        Set<Long> candidateCategoryIds = candidate.getCategories() == null ?
+                Collections.emptySet() : candidate.getCategories().stream()
+                .map(category -> category.getId())
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        long categoryOverlap = candidateCategoryIds.stream()
+                .filter(sourceCategoryIds::contains)
+                .count();
+
+        double categoryScore = sourceCategoryIds.isEmpty() ? 0.0 : (double) categoryOverlap / sourceCategoryIds.size();
+        double authorScore = sourceAuthorId != null && candidate.getUser() != null && Objects.equals(candidate.getUser().getId(), sourceAuthorId)
+                ? 1.0 : 0.0;
+        double popularityScore = candidate.getLikes() / maxLikes;
+
+        // Основной вес даётся категориям, меньше — автору, немного — популярности.
+        return categoryScore * 0.78 + authorScore * 0.18 + popularityScore * 0.04;
     }
 
     @Override

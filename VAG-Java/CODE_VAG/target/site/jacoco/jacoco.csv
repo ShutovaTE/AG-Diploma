@@ -4,7 +4,7 @@ vag,com.example.vag.dto,PresignedUploadResult,27,0,0,0,10,0,5,0,5,0
 vag,com.example.vag.dto,ModerationResult,10,68,0,0,3,19,3,18,3,18
 vag,com.example.vag.controller,AdminController.new MultipartFile() {...},76,0,7,0,14,0,13,0,9,0
 vag,com.example.vag.controller,ExhibitionController,533,0,38,0,112,0,35,0,16,0
-vag,com.example.vag.controller,ArtworkController,1014,0,106,0,226,0,71,0,17,0
+vag,com.example.vag.controller,ArtworkController,1025,0,106,0,228,0,71,0,17,0
 vag,com.example.vag.controller,CategoryController,65,0,0,0,16,0,4,0,4,0
 vag,com.example.vag.controller,GlobalModelAttributes,63,0,12,0,19,0,10,0,4,0
 vag,com.example.vag.controller,HomeController,153,0,8,0,42,0,10,0,6,0
@@ -30,7 +30,7 @@ vag,com.example.vag.model,Exhibition,309,0,58,0,27,0,52,0,23,0
 vag,com.example.vag.model,Artwork,755,0,140,0,70,0,121,0,51,0
 vag,com.example.vag.model,User,488,0,90,0,43,0,76,0,31,0
 vag,com.example.vag.recommendation.controller,RecommendationController,412,0,14,0,95,0,16,0,9,0
-vag,com.example.vag.service.impl,ArtworkServiceImpl,834,0,48,0,197,0,70,0,46,0
+vag,com.example.vag.service.impl,ArtworkServiceImpl,1022,0,70,0,236,0,87,0,52,0
 vag,com.example.vag.service.impl,ExhibitionServiceImpl,145,0,2,0,28,0,19,0,18,0
 vag,com.example.vag.service.impl,ImageHashService,214,0,18,0,59,0,20,0,11,0
 vag,com.example.vag.service.impl,UserServiceImpl,148,0,12,0,32,0,20,0,14,0

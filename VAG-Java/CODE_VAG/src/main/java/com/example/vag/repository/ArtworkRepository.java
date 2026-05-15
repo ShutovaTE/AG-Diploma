@@ -47,6 +47,7 @@ public interface ArtworkRepository extends JpaRepository<Artwork, Long> {
     List<Artwork> findByExhibitionId(@Param("exhibitionId") Long exhibitionId);
 
     @Query("SELECT DISTINCT a FROM Artwork a " +
+            "LEFT JOIN FETCH a.categories " +
             "LEFT JOIN FETCH a.user " +
             "LEFT JOIN FETCH a.comments c " +
             "LEFT JOIN FETCH c.user " +
@@ -70,6 +71,12 @@ public interface ArtworkRepository extends JpaRepository<Artwork, Long> {
                     "WHERE a.status = 'APPROVED'"
     )
     Page<Artwork> findApprovedArtworks(Pageable pageable);
+
+    @Query("SELECT DISTINCT a FROM Artwork a " +
+            "LEFT JOIN FETCH a.user " +
+            "LEFT JOIN FETCH a.categories " +
+            "WHERE a.status = 'APPROVED' AND a.id <> :artworkId")
+    List<Artwork> findApprovedArtworksExcept(@Param("artworkId") Long artworkId);
 
     @Query(
             value = "SELECT DISTINCT a FROM Artwork a " +

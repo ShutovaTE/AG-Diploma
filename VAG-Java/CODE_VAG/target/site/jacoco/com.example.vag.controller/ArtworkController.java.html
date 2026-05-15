@@ -145,22 +145,25 @@ public class ArtworkController {
 <span class="nc" id="L145">            return &quot;redirect:/auth/access-denied&quot;;</span>
         }
 
-<span class="nc" id="L148">        model.addAttribute(&quot;artwork&quot;, artwork);</span>
-<span class="nc bnc" id="L149" title="All 4 branches missed.">        model.addAttribute(&quot;isLiked&quot;, currentUser != null &amp;&amp; artworkService.isLikedByUser(artwork, currentUser));</span>
-<span class="nc bnc" id="L150" title="All 2 branches missed.">        model.addAttribute(&quot;isAuthenticated&quot;, currentUser != null);</span>
-<span class="nc" id="L151">        model.addAttribute(&quot;isAdmin&quot;, isAdmin);</span>
-<span class="nc" id="L152">        model.addAttribute(&quot;isAuthor&quot;, isAuthor);</span>
+<span class="nc" id="L148">        List&lt;Artwork&gt; similarArtworks = artworkService.findSimilarApprovedArtworks(artwork, 8);</span>
 
-<span class="nc" id="L154">        return &quot;artwork/details&quot;;</span>
+<span class="nc" id="L150">        model.addAttribute(&quot;artwork&quot;, artwork);</span>
+<span class="nc" id="L151">        model.addAttribute(&quot;similarArtworks&quot;, similarArtworks);</span>
+<span class="nc bnc" id="L152" title="All 4 branches missed.">        model.addAttribute(&quot;isLiked&quot;, currentUser != null &amp;&amp; artworkService.isLikedByUser(artwork, currentUser));</span>
+<span class="nc bnc" id="L153" title="All 2 branches missed.">        model.addAttribute(&quot;isAuthenticated&quot;, currentUser != null);</span>
+<span class="nc" id="L154">        model.addAttribute(&quot;isAdmin&quot;, isAdmin);</span>
+<span class="nc" id="L155">        model.addAttribute(&quot;isAuthor&quot;, isAuthor);</span>
+
+<span class="nc" id="L157">        return &quot;artwork/details&quot;;</span>
     }
 
     @GetMapping(&quot;/create&quot;)
     public String showCreateForm(@RequestParam(required = false) Long exhibitionId, Model model) {
-<span class="nc" id="L159">        model.addAttribute(&quot;artwork&quot;, new Artwork());</span>
-<span class="nc" id="L160">        model.addAttribute(&quot;categories&quot;, categoryService.findAll());</span>
-<span class="nc" id="L161">        model.addAttribute(&quot;selectedCategoryIds&quot;, new ArrayList&lt;Long&gt;());</span>
-<span class="nc" id="L162">        model.addAttribute(&quot;exhibitionId&quot;, exhibitionId);</span>
-<span class="nc" id="L163">        return &quot;artwork/create&quot;;</span>
+<span class="nc" id="L162">        model.addAttribute(&quot;artwork&quot;, new Artwork());</span>
+<span class="nc" id="L163">        model.addAttribute(&quot;categories&quot;, categoryService.findAll());</span>
+<span class="nc" id="L164">        model.addAttribute(&quot;selectedCategoryIds&quot;, new ArrayList&lt;Long&gt;());</span>
+<span class="nc" id="L165">        model.addAttribute(&quot;exhibitionId&quot;, exhibitionId);</span>
+<span class="nc" id="L166">        return &quot;artwork/create&quot;;</span>
     }
 
     /*@PostMapping(&quot;/create&quot;)
@@ -280,22 +283,22 @@ public class ArtworkController {
 
     @GetMapping(&quot;/edit/{id}&quot;)
     public String showEditForm(@PathVariable Long id, Model model) {
-<span class="nc" id="L283">        Artwork existingArtwork = artworkService.findByIdWithCategories(id).orElseThrow();</span>
-<span class="nc" id="L284">        User currentUser = userService.getCurrentUser();</span>
+<span class="nc" id="L286">        Artwork existingArtwork = artworkService.findByIdWithCategories(id).orElseThrow();</span>
+<span class="nc" id="L287">        User currentUser = userService.getCurrentUser();</span>
 
-<span class="nc bnc" id="L286" title="All 2 branches missed.">        if (!existingArtwork.getUser().getId().equals(currentUser.getId()) &amp;&amp;</span>
-<span class="nc bnc" id="L287" title="All 2 branches missed.">                !currentUser.hasRole(&quot;ADMIN&quot;)) {</span>
-<span class="nc" id="L288">            return &quot;redirect:/auth/access-denied&quot;;</span>
+<span class="nc bnc" id="L289" title="All 2 branches missed.">        if (!existingArtwork.getUser().getId().equals(currentUser.getId()) &amp;&amp;</span>
+<span class="nc bnc" id="L290" title="All 2 branches missed.">                !currentUser.hasRole(&quot;ADMIN&quot;)) {</span>
+<span class="nc" id="L291">            return &quot;redirect:/auth/access-denied&quot;;</span>
         }
 
-<span class="nc" id="L291">        List&lt;Long&gt; selectedCategoryIds = existingArtwork.getCategories().stream()</span>
-<span class="nc" id="L292">                .map(Category::getId)</span>
-<span class="nc" id="L293">                .collect(Collectors.toList());</span>
+<span class="nc" id="L294">        List&lt;Long&gt; selectedCategoryIds = existingArtwork.getCategories().stream()</span>
+<span class="nc" id="L295">                .map(Category::getId)</span>
+<span class="nc" id="L296">                .collect(Collectors.toList());</span>
 
-<span class="nc" id="L295">        model.addAttribute(&quot;selectedCategoryIds&quot;, selectedCategoryIds);</span>
-<span class="nc" id="L296">        model.addAttribute(&quot;artwork&quot;, existingArtwork);</span>
-<span class="nc" id="L297">        model.addAttribute(&quot;categories&quot;, categoryService.findAll());</span>
-<span class="nc" id="L298">        return &quot;artwork/edit&quot;;</span>
+<span class="nc" id="L298">        model.addAttribute(&quot;selectedCategoryIds&quot;, selectedCategoryIds);</span>
+<span class="nc" id="L299">        model.addAttribute(&quot;artwork&quot;, existingArtwork);</span>
+<span class="nc" id="L300">        model.addAttribute(&quot;categories&quot;, categoryService.findAll());</span>
+<span class="nc" id="L301">        return &quot;artwork/edit&quot;;</span>
     }
 
 
@@ -303,44 +306,44 @@ public class ArtworkController {
     public String addComment(@PathVariable Long id,
                              @RequestParam String content,
                              RedirectAttributes redirectAttributes) {
-<span class="nc" id="L306">        User user = userService.getCurrentUser();</span>
-<span class="nc" id="L307">        artworkService.addComment(id, user, content);</span>
-<span class="nc" id="L308">        return &quot;redirect:/artwork/details/&quot; + id;</span>
+<span class="nc" id="L309">        User user = userService.getCurrentUser();</span>
+<span class="nc" id="L310">        artworkService.addComment(id, user, content);</span>
+<span class="nc" id="L311">        return &quot;redirect:/artwork/details/&quot; + id;</span>
     }
 
     @PostMapping(&quot;/report/{id}&quot;)
     public String reportArtwork(@PathVariable Long id,
                                 @RequestParam(value = &quot;reason&quot;, required = false) String reason,
                                 RedirectAttributes redirectAttributes) {
-<span class="nc" id="L315">        User currentUser = userService.getCurrentUser();</span>
-<span class="nc bnc" id="L316" title="All 2 branches missed.">        if (currentUser == null) {</span>
-<span class="nc" id="L317">            return &quot;redirect:/auth/login&quot;;</span>
+<span class="nc" id="L318">        User currentUser = userService.getCurrentUser();</span>
+<span class="nc bnc" id="L319" title="All 2 branches missed.">        if (currentUser == null) {</span>
+<span class="nc" id="L320">            return &quot;redirect:/auth/login&quot;;</span>
         }
 
-<span class="nc" id="L320">        Artwork artwork = artworkService.findById(id).orElseThrow();</span>
-<span class="nc bnc" id="L321" title="All 4 branches missed.">        if (artwork.getUser() != null &amp;&amp; artwork.getUser().getId().equals(currentUser.getId())) {</span>
-<span class="nc" id="L322">            redirectAttributes.addFlashAttribute(&quot;warning&quot;, &quot;Нельзя пожаловаться на собственную публикацию.&quot;);</span>
-<span class="nc" id="L323">            return &quot;redirect:/artwork/details/&quot; + id;</span>
+<span class="nc" id="L323">        Artwork artwork = artworkService.findById(id).orElseThrow();</span>
+<span class="nc bnc" id="L324" title="All 4 branches missed.">        if (artwork.getUser() != null &amp;&amp; artwork.getUser().getId().equals(currentUser.getId())) {</span>
+<span class="nc" id="L325">            redirectAttributes.addFlashAttribute(&quot;warning&quot;, &quot;Нельзя пожаловаться на собственную публикацию.&quot;);</span>
+<span class="nc" id="L326">            return &quot;redirect:/artwork/details/&quot; + id;</span>
         }
 
-<span class="nc" id="L326">        artworkService.reportArtwork(id, currentUser, reason);</span>
+<span class="nc" id="L329">        artworkService.reportArtwork(id, currentUser, reason);</span>
 
-<span class="nc bnc" id="L328" title="All 4 branches missed.">        String reasonText = (reason == null || reason.trim().isEmpty()) ? &quot;Без комментария&quot; : reason.trim();</span>
-<span class="nc" id="L329">        List&lt;User&gt; admins = userService.findAll().stream()</span>
-<span class="nc" id="L330">                .filter(user -&gt; user.hasRole(&quot;ADMIN&quot;))</span>
-<span class="nc" id="L331">                .collect(Collectors.toList());</span>
+<span class="nc bnc" id="L331" title="All 4 branches missed.">        String reasonText = (reason == null || reason.trim().isEmpty()) ? &quot;Без комментария&quot; : reason.trim();</span>
+<span class="nc" id="L332">        List&lt;User&gt; admins = userService.findAll().stream()</span>
+<span class="nc" id="L333">                .filter(user -&gt; user.hasRole(&quot;ADMIN&quot;))</span>
+<span class="nc" id="L334">                .collect(Collectors.toList());</span>
 
-<span class="nc bnc" id="L333" title="All 2 branches missed.">        for (User admin : admins) {</span>
-<span class="nc" id="L334">            notificationService.create(</span>
+<span class="nc bnc" id="L336" title="All 2 branches missed.">        for (User admin : admins) {</span>
+<span class="nc" id="L337">            notificationService.create(</span>
                     admin,
-<span class="nc" id="L336">                    &quot;Поступила жалоба на публикацию \&quot;&quot; + artwork.getTitle() + &quot;\&quot; от пользователя &quot; +</span>
-<span class="nc" id="L337">                            currentUser.getUsername() + &quot;. Причина: &quot; + reasonText,</span>
-<span class="nc" id="L338">                    &quot;/artwork/details/&quot; + artwork.getId()</span>
+<span class="nc" id="L339">                    &quot;Поступила жалоба на публикацию \&quot;&quot; + artwork.getTitle() + &quot;\&quot; от пользователя &quot; +</span>
+<span class="nc" id="L340">                            currentUser.getUsername() + &quot;. Причина: &quot; + reasonText,</span>
+<span class="nc" id="L341">                    &quot;/artwork/details/&quot; + artwork.getId()</span>
             );
-<span class="nc" id="L340">        }</span>
+<span class="nc" id="L343">        }</span>
 
-<span class="nc" id="L342">        redirectAttributes.addFlashAttribute(&quot;message&quot;, &quot;Жалоба отправлена администратору.&quot;);</span>
-<span class="nc" id="L343">        return &quot;redirect:/artwork/details/&quot; + id;</span>
+<span class="nc" id="L345">        redirectAttributes.addFlashAttribute(&quot;message&quot;, &quot;Жалоба отправлена администратору.&quot;);</span>
+<span class="nc" id="L346">        return &quot;redirect:/artwork/details/&quot; + id;</span>
     }
 
 
@@ -354,43 +357,43 @@ public class ArtworkController {
             @RequestParam(value = &quot;artistComment&quot;, required = false) String artistComment,
             Model model) throws IOException {
 
-<span class="nc bnc" id="L357" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
-<span class="nc" id="L358">            model.addAttribute(&quot;categories&quot;, categoryService.findAll());</span>
-<span class="nc" id="L359">            model.addAttribute(&quot;selectedCategoryIds&quot;, categoryIds);</span>
-<span class="nc" id="L360">            return &quot;artwork/edit&quot;;</span>
+<span class="nc bnc" id="L360" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L361">            model.addAttribute(&quot;categories&quot;, categoryService.findAll());</span>
+<span class="nc" id="L362">            model.addAttribute(&quot;selectedCategoryIds&quot;, categoryIds);</span>
+<span class="nc" id="L363">            return &quot;artwork/edit&quot;;</span>
         }
 
-<span class="nc" id="L363">        Artwork existingArtwork = artworkService.findByIdWithCategories(artwork.getId()).orElseThrow();</span>
-<span class="nc" id="L364">        User currentUser = userService.getCurrentUser();</span>
+<span class="nc" id="L366">        Artwork existingArtwork = artworkService.findByIdWithCategories(artwork.getId()).orElseThrow();</span>
+<span class="nc" id="L367">        User currentUser = userService.getCurrentUser();</span>
 
-<span class="nc bnc" id="L366" title="All 2 branches missed.">        if (!existingArtwork.getUser().getId().equals(currentUser.getId()) &amp;&amp;</span>
-<span class="nc bnc" id="L367" title="All 2 branches missed.">                !currentUser.hasRole(&quot;ADMIN&quot;)) {</span>
-<span class="nc" id="L368">            return &quot;redirect:/auth/access-denied&quot;;</span>
+<span class="nc bnc" id="L369" title="All 2 branches missed.">        if (!existingArtwork.getUser().getId().equals(currentUser.getId()) &amp;&amp;</span>
+<span class="nc bnc" id="L370" title="All 2 branches missed.">                !currentUser.hasRole(&quot;ADMIN&quot;)) {</span>
+<span class="nc" id="L371">            return &quot;redirect:/auth/access-denied&quot;;</span>
         }
 
-<span class="nc" id="L371">        List&lt;Category&gt; categories = categoryService.findAllByIds(categoryIds);</span>
-<span class="nc" id="L372">        existingArtwork.setCategories(new HashSet&lt;&gt;(categories));</span>
-<span class="nc" id="L373">        existingArtwork.setTitle(artwork.getTitle());</span>
-<span class="nc" id="L374">        existingArtwork.setDescription(artwork.getDescription());</span>
-<span class="nc" id="L375">        existingArtwork.setStatus(Artwork.ArtworkStatus.PENDING.name());</span>
-<span class="nc" id="L376">        existingArtwork.setRejectionReason(null);</span>
+<span class="nc" id="L374">        List&lt;Category&gt; categories = categoryService.findAllByIds(categoryIds);</span>
+<span class="nc" id="L375">        existingArtwork.setCategories(new HashSet&lt;&gt;(categories));</span>
+<span class="nc" id="L376">        existingArtwork.setTitle(artwork.getTitle());</span>
+<span class="nc" id="L377">        existingArtwork.setDescription(artwork.getDescription());</span>
+<span class="nc" id="L378">        existingArtwork.setStatus(Artwork.ArtworkStatus.PENDING.name());</span>
+<span class="nc" id="L379">        existingArtwork.setRejectionReason(null);</span>
 
-<span class="nc bnc" id="L378" title="All 4 branches missed.">        if (artistComment != null &amp;&amp; !artistComment.trim().isEmpty()) {</span>
-<span class="nc" id="L379">            existingArtwork.setArtistComment(artistComment.trim());</span>
+<span class="nc bnc" id="L381" title="All 4 branches missed.">        if (artistComment != null &amp;&amp; !artistComment.trim().isEmpty()) {</span>
+<span class="nc" id="L382">            existingArtwork.setArtistComment(artistComment.trim());</span>
         }
 
-<span class="nc bnc" id="L382" title="All 4 branches missed.">        if (imageFile != null &amp;&amp; !imageFile.isEmpty()) {</span>
-<span class="nc" id="L383">            String fileName = StringUtils.cleanPath(imageFile.getOriginalFilename());</span>
-<span class="nc" id="L384">            String safeFileName = fileName</span>
-<span class="nc" id="L385">                    .replace(&quot; &quot;, &quot;_&quot;)</span>
-<span class="nc" id="L386">                    .replaceAll(&quot;[^a-zA-Z0-9._-]&quot;, &quot;&quot;);</span>
-<span class="nc" id="L387">            String relativePath = &quot;artwork-images/&quot; + currentUser.getId() + &quot;/&quot; + safeFileName;</span>
-<span class="nc" id="L388">            existingArtwork.setImagePath(relativePath);</span>
-<span class="nc" id="L389">            fileUploadUtil.saveFile(currentUser.getId(), safeFileName, imageFile);</span>
+<span class="nc bnc" id="L385" title="All 4 branches missed.">        if (imageFile != null &amp;&amp; !imageFile.isEmpty()) {</span>
+<span class="nc" id="L386">            String fileName = StringUtils.cleanPath(imageFile.getOriginalFilename());</span>
+<span class="nc" id="L387">            String safeFileName = fileName</span>
+<span class="nc" id="L388">                    .replace(&quot; &quot;, &quot;_&quot;)</span>
+<span class="nc" id="L389">                    .replaceAll(&quot;[^a-zA-Z0-9._-]&quot;, &quot;&quot;);</span>
+<span class="nc" id="L390">            String relativePath = &quot;artwork-images/&quot; + currentUser.getId() + &quot;/&quot; + safeFileName;</span>
+<span class="nc" id="L391">            existingArtwork.setImagePath(relativePath);</span>
+<span class="nc" id="L392">            fileUploadUtil.saveFile(currentUser.getId(), safeFileName, imageFile);</span>
         }
 
-<span class="nc" id="L392">        artworkService.save(existingArtwork);</span>
-<span class="nc" id="L393">        return &quot;redirect:/user/profile?updated&quot;;</span>
+<span class="nc" id="L395">        artworkService.save(existingArtwork);</span>
+<span class="nc" id="L396">        return &quot;redirect:/user/profile?updated&quot;;</span>
     }
 
     /**
@@ -402,32 +405,32 @@ public class ArtworkController {
             @RequestParam String fileName,
             @RequestParam String contentType) {
 
-<span class="nc" id="L405">        User currentUser = userService.getCurrentUser();</span>
-<span class="nc bnc" id="L406" title="All 2 branches missed.">        if (currentUser == null) {</span>
-<span class="nc" id="L407">            return ResponseEntity.status(401).build();</span>
+<span class="nc" id="L408">        User currentUser = userService.getCurrentUser();</span>
+<span class="nc bnc" id="L409" title="All 2 branches missed.">        if (currentUser == null) {</span>
+<span class="nc" id="L410">            return ResponseEntity.status(401).build();</span>
         }
 
-<span class="nc bnc" id="L410" title="All 2 branches missed.">        if (!isValidImageType(contentType)) {</span>
-<span class="nc" id="L411">            return ResponseEntity.badRequest().build();</span>
+<span class="nc bnc" id="L413" title="All 2 branches missed.">        if (!isValidImageType(contentType)) {</span>
+<span class="nc" id="L414">            return ResponseEntity.badRequest().build();</span>
         }
 
         // Генерируем UUID ТОЛЬКО ОДИН РАЗ
-<span class="nc" id="L415">        String uuid = UUID.randomUUID().toString();</span>
-<span class="nc" id="L416">        String safeFileName = uuid + &quot;_&quot; + fileName.replaceAll(&quot;[^a-zA-Z0-9._-]&quot;, &quot;_&quot;);</span>
-<span class="nc" id="L417">        String objectKey = &quot;artwork-images/&quot; + currentUser.getId() + &quot;/&quot; + safeFileName;</span>
+<span class="nc" id="L418">        String uuid = UUID.randomUUID().toString();</span>
+<span class="nc" id="L419">        String safeFileName = uuid + &quot;_&quot; + fileName.replaceAll(&quot;[^a-zA-Z0-9._-]&quot;, &quot;_&quot;);</span>
+<span class="nc" id="L420">        String objectKey = &quot;artwork-images/&quot; + currentUser.getId() + &quot;/&quot; + safeFileName;</span>
 
-<span class="nc" id="L419">        System.out.println(&quot;📤 Генерация presigned URL для: &quot; + objectKey);</span>
+<span class="nc" id="L422">        System.out.println(&quot;📤 Генерация presigned URL для: &quot; + objectKey);</span>
 
         // Генерируем presigned URL для ЭТОГО же objectKey
-<span class="nc" id="L422">        String presignedUrl = fileUploadUtil.generatePresignedUrlForObject(objectKey, contentType);</span>
+<span class="nc" id="L425">        String presignedUrl = fileUploadUtil.generatePresignedUrlForObject(objectKey, contentType);</span>
 
-<span class="nc" id="L424">        Map&lt;String, String&gt; response = new HashMap&lt;&gt;();</span>
-<span class="nc" id="L425">        response.put(&quot;presignedUrl&quot;, presignedUrl);</span>
-<span class="nc" id="L426">        response.put(&quot;objectKey&quot;, objectKey);</span>
-<span class="nc" id="L427">        response.put(&quot;safeFileName&quot;, safeFileName);</span>
-<span class="nc" id="L428">        response.put(&quot;publicUrl&quot;, fileUploadUtil.getPublicUrl(objectKey));</span>
+<span class="nc" id="L427">        Map&lt;String, String&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L428">        response.put(&quot;presignedUrl&quot;, presignedUrl);</span>
+<span class="nc" id="L429">        response.put(&quot;objectKey&quot;, objectKey);</span>
+<span class="nc" id="L430">        response.put(&quot;safeFileName&quot;, safeFileName);</span>
+<span class="nc" id="L431">        response.put(&quot;publicUrl&quot;, fileUploadUtil.getPublicUrl(objectKey));</span>
 
-<span class="nc" id="L430">        return ResponseEntity.ok(response);</span>
+<span class="nc" id="L433">        return ResponseEntity.ok(response);</span>
     }
 
     /**
@@ -445,147 +448,147 @@ public class ArtworkController {
             Model model,
             RedirectAttributes redirectAttributes) {
 
-<span class="nc" id="L448">        User currentUser = userService.getCurrentUser();</span>
-<span class="nc bnc" id="L449" title="All 2 branches missed.">        if (currentUser == null) {</span>
-<span class="nc" id="L450">            return &quot;redirect:/auth/login&quot;;</span>
+<span class="nc" id="L451">        User currentUser = userService.getCurrentUser();</span>
+<span class="nc bnc" id="L452" title="All 2 branches missed.">        if (currentUser == null) {</span>
+<span class="nc" id="L453">            return &quot;redirect:/auth/login&quot;;</span>
         }
 
-<span class="nc bnc" id="L453" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
-<span class="nc" id="L454">            model.addAttribute(&quot;categories&quot;, categoryService.findAll());</span>
-<span class="nc" id="L455">            model.addAttribute(&quot;selectedCategoryIds&quot;, categoryIds);</span>
-<span class="nc" id="L456">            model.addAttribute(&quot;exhibitionId&quot;, exhibitionId);</span>
-<span class="nc" id="L457">            return &quot;artwork/create&quot;;</span>
+<span class="nc bnc" id="L456" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L457">            model.addAttribute(&quot;categories&quot;, categoryService.findAll());</span>
+<span class="nc" id="L458">            model.addAttribute(&quot;selectedCategoryIds&quot;, categoryIds);</span>
+<span class="nc" id="L459">            model.addAttribute(&quot;exhibitionId&quot;, exhibitionId);</span>
+<span class="nc" id="L460">            return &quot;artwork/create&quot;;</span>
         }
 
-<span class="nc bnc" id="L460" title="All 4 branches missed.">        if (imagePath == null || imagePath.isEmpty()) {</span>
-<span class="nc" id="L461">            redirectAttributes.addFlashAttribute(&quot;error&quot;, &quot;Необходимо загрузить изображение&quot;);</span>
-<span class="nc" id="L462">            return &quot;redirect:/artwork/create&quot;;</span>
+<span class="nc bnc" id="L463" title="All 4 branches missed.">        if (imagePath == null || imagePath.isEmpty()) {</span>
+<span class="nc" id="L464">            redirectAttributes.addFlashAttribute(&quot;error&quot;, &quot;Необходимо загрузить изображение&quot;);</span>
+<span class="nc" id="L465">            return &quot;redirect:/artwork/create&quot;;</span>
         }
 
         try {
-<span class="nc" id="L466">            MultipartFile imageFile = fileUploadUtil.getAsMultipartFile(imagePath, safeFileName);</span>
+<span class="nc" id="L469">            MultipartFile imageFile = fileUploadUtil.getAsMultipartFile(imagePath, safeFileName);</span>
 
             // ИИ-модерация
-<span class="nc" id="L469">            ModerationResult moderationResult = moderationService.moderateImage(imageFile, null);</span>
+<span class="nc" id="L472">            ModerationResult moderationResult = moderationService.moderateImage(imageFile, null);</span>
 
-<span class="nc" id="L471">            List&lt;Category&gt; categories = categoryService.findAllByIds(categoryIds);</span>
-<span class="nc" id="L472">            artwork.setCategories(new HashSet&lt;&gt;(categories));</span>
-<span class="nc" id="L473">            artwork.setImagePath(imagePath);</span>
-<span class="nc" id="L474">            artwork.setDateCreation(java.time.LocalDate.now());</span>
-<span class="nc" id="L475">            artwork.setUser(currentUser);</span>
-<span class="nc" id="L476">            artwork.setLikes(0);</span>
-<span class="nc" id="L477">            artwork.setViews(0);</span>
+<span class="nc" id="L474">            List&lt;Category&gt; categories = categoryService.findAllByIds(categoryIds);</span>
+<span class="nc" id="L475">            artwork.setCategories(new HashSet&lt;&gt;(categories));</span>
+<span class="nc" id="L476">            artwork.setImagePath(imagePath);</span>
+<span class="nc" id="L477">            artwork.setDateCreation(java.time.LocalDate.now());</span>
+<span class="nc" id="L478">            artwork.setUser(currentUser);</span>
+<span class="nc" id="L479">            artwork.setLikes(0);</span>
+<span class="nc" id="L480">            artwork.setViews(0);</span>
 
             // Сохраняем отчёт ИИ
-<span class="nc" id="L480">            artwork.setAiReport(moderationResult.getAiReport());</span>
+<span class="nc" id="L483">            artwork.setAiReport(moderationResult.getAiReport());</span>
 
-<span class="nc bnc" id="L482" title="All 2 branches missed.">            if (!moderationResult.isApproved()) {</span>
-<span class="nc bnc" id="L483" title="All 2 branches missed.">                if (moderationResult.isNeedsManualReview()) {</span>
-<span class="nc" id="L484">                    artwork.setStatus(Artwork.ArtworkStatus.PENDING.name());</span>
-<span class="nc" id="L485">                    artwork.setRejectionReason(&quot;Требуется ручная проверка: &quot; + moderationResult.getManualReviewReason());</span>
+<span class="nc bnc" id="L485" title="All 2 branches missed.">            if (!moderationResult.isApproved()) {</span>
+<span class="nc bnc" id="L486" title="All 2 branches missed.">                if (moderationResult.isNeedsManualReview()) {</span>
+<span class="nc" id="L487">                    artwork.setStatus(Artwork.ArtworkStatus.PENDING.name());</span>
+<span class="nc" id="L488">                    artwork.setRejectionReason(&quot;Требуется ручная проверка: &quot; + moderationResult.getManualReviewReason());</span>
                 } else {
-<span class="nc" id="L487">                    artwork.setStatus(Artwork.ArtworkStatus.REJECTED.name());</span>
-<span class="nc" id="L488">                    artwork.setRejectionReason(moderationResult.getRejectionReason());</span>
+<span class="nc" id="L490">                    artwork.setStatus(Artwork.ArtworkStatus.REJECTED.name());</span>
+<span class="nc" id="L491">                    artwork.setRejectionReason(moderationResult.getRejectionReason());</span>
                 }
             } else {
-<span class="nc" id="L491">                artwork.setStatus(Artwork.ArtworkStatus.APPROVED.name());</span>
+<span class="nc" id="L494">                artwork.setStatus(Artwork.ArtworkStatus.APPROVED.name());</span>
             }
 
-<span class="nc" id="L494">            Artwork saved = artworkService.save(artwork);</span>
+<span class="nc" id="L497">            Artwork saved = artworkService.save(artwork);</span>
 
-<span class="nc bnc" id="L496" title="All 2 branches missed.">            if (!Artwork.ArtworkStatus.REJECTED.name().equals(saved.getStatus())) {</span>
+<span class="nc bnc" id="L499" title="All 2 branches missed.">            if (!Artwork.ArtworkStatus.REJECTED.name().equals(saved.getStatus())) {</span>
                 try {
-<span class="nc" id="L498">                    imageHashService.saveHash(saved, imageFile);</span>
-<span class="nc" id="L499">                } catch (Exception e) {</span>
-<span class="nc" id="L500">                    System.err.println(&quot;Не удалось сохранить хеш: &quot; + e.getMessage());</span>
-<span class="nc" id="L501">                }</span>
+<span class="nc" id="L501">                    imageHashService.saveHash(saved, imageFile);</span>
+<span class="nc" id="L502">                } catch (Exception e) {</span>
+<span class="nc" id="L503">                    System.err.println(&quot;Не удалось сохранить хеш: &quot; + e.getMessage());</span>
+<span class="nc" id="L504">                }</span>
             }
 
             // Уведомления
-<span class="nc bnc" id="L505" title="All 2 branches missed.">            if (Artwork.ArtworkStatus.APPROVED.name().equals(saved.getStatus())) {</span>
-<span class="nc" id="L506">                notificationService.create(currentUser,</span>
-<span class="nc" id="L507">                        &quot;Ваша публикация \&quot;&quot; + saved.getTitle() + &quot;\&quot; прошла проверку и опубликована.&quot;,</span>
-<span class="nc" id="L508">                        &quot;/artwork/details/&quot; + saved.getId());</span>
-<span class="nc bnc" id="L509" title="All 2 branches missed.">            } else if (Artwork.ArtworkStatus.REJECTED.name().equals(saved.getStatus())) {</span>
-<span class="nc" id="L510">                notificationService.create(currentUser,</span>
-<span class="nc" id="L511">                        &quot;Ваша публикация \&quot;&quot; + saved.getTitle() + &quot;\&quot; отклонена: &quot; + saved.getRejectionReason(),</span>
-<span class="nc" id="L512">                        &quot;/artwork/details/&quot; + saved.getId());</span>
+<span class="nc bnc" id="L508" title="All 2 branches missed.">            if (Artwork.ArtworkStatus.APPROVED.name().equals(saved.getStatus())) {</span>
+<span class="nc" id="L509">                notificationService.create(currentUser,</span>
+<span class="nc" id="L510">                        &quot;Ваша публикация \&quot;&quot; + saved.getTitle() + &quot;\&quot; прошла проверку и опубликована.&quot;,</span>
+<span class="nc" id="L511">                        &quot;/artwork/details/&quot; + saved.getId());</span>
+<span class="nc bnc" id="L512" title="All 2 branches missed.">            } else if (Artwork.ArtworkStatus.REJECTED.name().equals(saved.getStatus())) {</span>
+<span class="nc" id="L513">                notificationService.create(currentUser,</span>
+<span class="nc" id="L514">                        &quot;Ваша публикация \&quot;&quot; + saved.getTitle() + &quot;\&quot; отклонена: &quot; + saved.getRejectionReason(),</span>
+<span class="nc" id="L515">                        &quot;/artwork/details/&quot; + saved.getId());</span>
             } else {
-<span class="nc" id="L514">                notificationService.create(currentUser,</span>
-<span class="nc" id="L515">                        &quot;Ваша публикация \&quot;&quot; + saved.getTitle() + &quot;\&quot; отправлена на модерацию.&quot;,</span>
-<span class="nc" id="L516">                        &quot;/artwork/details/&quot; + saved.getId());</span>
+<span class="nc" id="L517">                notificationService.create(currentUser,</span>
+<span class="nc" id="L518">                        &quot;Ваша публикация \&quot;&quot; + saved.getTitle() + &quot;\&quot; отправлена на модерацию.&quot;,</span>
+<span class="nc" id="L519">                        &quot;/artwork/details/&quot; + saved.getId());</span>
             }
 
-<span class="nc bnc" id="L519" title="All 2 branches missed.">            if (exhibitionId != null) {</span>
-<span class="nc" id="L520">                Exhibition exhibition = exhibitionService.findById(exhibitionId).orElseThrow();</span>
-<span class="nc bnc" id="L521" title="All 4 branches missed.">                if (!exhibition.isAuthorOnly() || currentUser.getId().equals(exhibition.getUser().getId())) {</span>
-<span class="nc" id="L522">                    exhibition.getArtworks().add(saved);</span>
-<span class="nc" id="L523">                    saved.getExhibitions().add(exhibition);</span>
-<span class="nc" id="L524">                    exhibitionService.save(exhibition);</span>
-<span class="nc" id="L525">                    artworkService.save(saved);</span>
-<span class="nc" id="L526">                    return &quot;redirect:/exhibition/details/&quot; + exhibitionId;</span>
+<span class="nc bnc" id="L522" title="All 2 branches missed.">            if (exhibitionId != null) {</span>
+<span class="nc" id="L523">                Exhibition exhibition = exhibitionService.findById(exhibitionId).orElseThrow();</span>
+<span class="nc bnc" id="L524" title="All 4 branches missed.">                if (!exhibition.isAuthorOnly() || currentUser.getId().equals(exhibition.getUser().getId())) {</span>
+<span class="nc" id="L525">                    exhibition.getArtworks().add(saved);</span>
+<span class="nc" id="L526">                    saved.getExhibitions().add(exhibition);</span>
+<span class="nc" id="L527">                    exhibitionService.save(exhibition);</span>
+<span class="nc" id="L528">                    artworkService.save(saved);</span>
+<span class="nc" id="L529">                    return &quot;redirect:/exhibition/details/&quot; + exhibitionId;</span>
                 }
             }
 
-<span class="nc" id="L530">            redirectAttributes.addFlashAttribute(&quot;message&quot;, &quot;Произведение успешно опубликовано!&quot;);</span>
-<span class="nc" id="L531">            return &quot;redirect:/user/profile?created&quot;;</span>
+<span class="nc" id="L533">            redirectAttributes.addFlashAttribute(&quot;message&quot;, &quot;Произведение успешно опубликовано!&quot;);</span>
+<span class="nc" id="L534">            return &quot;redirect:/user/profile?created&quot;;</span>
 
-<span class="nc" id="L533">        } catch (IOException e) {</span>
-<span class="nc" id="L534">            redirectAttributes.addFlashAttribute(&quot;error&quot;, &quot;Ошибка при загрузке: &quot; + e.getMessage());</span>
-<span class="nc" id="L535">            return &quot;redirect:/artwork/create&quot;;</span>
+<span class="nc" id="L536">        } catch (IOException e) {</span>
+<span class="nc" id="L537">            redirectAttributes.addFlashAttribute(&quot;error&quot;, &quot;Ошибка при загрузке: &quot; + e.getMessage());</span>
+<span class="nc" id="L538">            return &quot;redirect:/artwork/create&quot;;</span>
         }
     }
     private boolean isValidImageType(String contentType) {
-<span class="nc bnc" id="L539" title="All 2 branches missed.">        return contentType != null &amp;&amp; (</span>
-<span class="nc bnc" id="L540" title="All 2 branches missed.">                contentType.equals(&quot;image/jpeg&quot;) ||</span>
-<span class="nc bnc" id="L541" title="All 2 branches missed.">                        contentType.equals(&quot;image/png&quot;) ||</span>
-<span class="nc bnc" id="L542" title="All 2 branches missed.">                        contentType.equals(&quot;image/webp&quot;)</span>
+<span class="nc bnc" id="L542" title="All 2 branches missed.">        return contentType != null &amp;&amp; (</span>
+<span class="nc bnc" id="L543" title="All 2 branches missed.">                contentType.equals(&quot;image/jpeg&quot;) ||</span>
+<span class="nc bnc" id="L544" title="All 2 branches missed.">                        contentType.equals(&quot;image/png&quot;) ||</span>
+<span class="nc bnc" id="L545" title="All 2 branches missed.">                        contentType.equals(&quot;image/webp&quot;)</span>
         );
     }
 
     @PostMapping(&quot;/delete/{id}&quot;)
     public String deleteArtwork(@PathVariable Long id) {
-<span class="nc" id="L548">        Artwork artwork = artworkService.findById(id).orElseThrow();</span>
-<span class="nc" id="L549">        User currentUser = userService.getCurrentUser();</span>
+<span class="nc" id="L551">        Artwork artwork = artworkService.findById(id).orElseThrow();</span>
+<span class="nc" id="L552">        User currentUser = userService.getCurrentUser();</span>
 
-<span class="nc bnc" id="L551" title="All 2 branches missed.">        if (!artwork.getUser().getId().equals(currentUser.getId()) &amp;&amp;</span>
-<span class="nc bnc" id="L552" title="All 2 branches missed.">                !currentUser.hasRole(&quot;ADMIN&quot;)) {</span>
-<span class="nc" id="L553">            return &quot;redirect:/auth/access-denied&quot;;</span>
+<span class="nc bnc" id="L554" title="All 2 branches missed.">        if (!artwork.getUser().getId().equals(currentUser.getId()) &amp;&amp;</span>
+<span class="nc bnc" id="L555" title="All 2 branches missed.">                !currentUser.hasRole(&quot;ADMIN&quot;)) {</span>
+<span class="nc" id="L556">            return &quot;redirect:/auth/access-denied&quot;;</span>
         }
 
-<span class="nc" id="L556">        artworkService.delete(artwork);</span>
-<span class="nc" id="L557">        return &quot;redirect:/user/profile?deleted&quot;;</span>
+<span class="nc" id="L559">        artworkService.delete(artwork);</span>
+<span class="nc" id="L560">        return &quot;redirect:/user/profile?deleted&quot;;</span>
     }
 
     @PostMapping(&quot;/like/{id}&quot;)
     public String likeArtwork(@PathVariable Long id) {
-<span class="nc" id="L562">        User user = userService.getCurrentUser();</span>
-<span class="nc" id="L563">        artworkService.likeArtwork(id, user);</span>
-<span class="nc" id="L564">        return &quot;redirect:/artwork/details/&quot; + id;</span>
+<span class="nc" id="L565">        User user = userService.getCurrentUser();</span>
+<span class="nc" id="L566">        artworkService.likeArtwork(id, user);</span>
+<span class="nc" id="L567">        return &quot;redirect:/artwork/details/&quot; + id;</span>
     }
 
     @PostMapping(&quot;/unlike/{id}&quot;)
     public String unlikeArtwork(@PathVariable Long id) {
-<span class="nc" id="L569">        User user = userService.getCurrentUser();</span>
-<span class="nc" id="L570">        artworkService.unlikeArtwork(id, user);</span>
-<span class="nc" id="L571">        return &quot;redirect:/artwork/details/&quot; + id;</span>
+<span class="nc" id="L572">        User user = userService.getCurrentUser();</span>
+<span class="nc" id="L573">        artworkService.unlikeArtwork(id, user);</span>
+<span class="nc" id="L574">        return &quot;redirect:/artwork/details/&quot; + id;</span>
     }
 
     @GetMapping(&quot;/artworks&quot;)
     public String showArtworks(Model model, @RequestParam(defaultValue = &quot;0&quot;) int page) {
-<span class="nc" id="L576">        int pageSize = 12;</span>
+<span class="nc" id="L579">        int pageSize = 12;</span>
         
-<span class="nc" id="L578">        page = Math.max(0, page);</span>
+<span class="nc" id="L581">        page = Math.max(0, page);</span>
         
-<span class="nc" id="L580">        Pageable pageable = PageRequest.of(page, pageSize, Sort.by(&quot;id&quot;).descending());</span>
-<span class="nc" id="L581">        Page&lt;Artwork&gt; artworkPage = artworkService.getApprovedArtworks(pageable);</span>
+<span class="nc" id="L583">        Pageable pageable = PageRequest.of(page, pageSize, Sort.by(&quot;id&quot;).descending());</span>
+<span class="nc" id="L584">        Page&lt;Artwork&gt; artworkPage = artworkService.getApprovedArtworks(pageable);</span>
         
-<span class="nc bnc" id="L583" title="All 4 branches missed.">        if (page &gt; 0 &amp;&amp; artworkPage.getContent().isEmpty()) {</span>
-<span class="nc" id="L584">            return &quot;redirect:/artwork/artworks?page=&quot; + (page - 1);</span>
+<span class="nc bnc" id="L586" title="All 4 branches missed.">        if (page &gt; 0 &amp;&amp; artworkPage.getContent().isEmpty()) {</span>
+<span class="nc" id="L587">            return &quot;redirect:/artwork/artworks?page=&quot; + (page - 1);</span>
         }
         
-<span class="nc" id="L587">        model.addAttribute(&quot;artworks&quot;, artworkPage);</span>
-<span class="nc" id="L588">        return &quot;artwork/list&quot;;</span>
+<span class="nc" id="L590">        model.addAttribute(&quot;artworks&quot;, artworkPage);</span>
+<span class="nc" id="L591">        return &quot;artwork/list&quot;;</span>
     }
 
 }

@@ -121,6 +121,27 @@
             </div>
         </div>
     </div>
+
+    <div th:if="${similarArtworks != null and !similarArtworks.isEmpty()}" class="similar-works-section">
+        <h2>           Похожие публикации</h2>
+        <div class="artwork-grid">
+            <div th:each="similar : ${similarArtworks}" class="artwork-card">
+                <a th:href="@{/artwork/details/{id}(id=${similar.id})}">
+                    <img th:src="@{'/uploads/' + ${#strings.replace(similar.imagePath, ' ', '%20')}}"/>
+                    <h3 th:text="${similar.title}"></h3>
+                </a>
+                <p>Автор:
+                    <span th:if="${similar.user != null}" th:text="${similar.user.username}"></span>
+                </p>
+                <p th:if="${similar.categories != null and !similar.categories.isEmpty()}">
+                    Категории:
+                    <span th:each="category, iterStat : ${similar.categories}"
+                          th:text="${category.name + (iterStat.last ? '' : ', ')}"></span>
+                </p>
+                <p th:text="${similar.likes} + ' лайков'"></p>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div th:replace="fragments/footer :: footer"></div>
