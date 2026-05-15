@@ -7,6 +7,8 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.logging.Level;
@@ -48,16 +50,73 @@ public class RecommendationServiceImpl implements RecommendationService {
 
     public RecommendationServiceImpl(String pythonExecutable, String scriptPath, 
                                      ModelManagementService modelManagementService) {
-        this.pythonExecutable = pythonExecutable;
-        this.scriptPath = scriptPath;
+        this.pythonExecutable = resolvePythonExecutable(pythonExecutable);
+        this.scriptPath = resolvePath(scriptPath);
         this.modelManagementService = modelManagementService;
         this.objectMapper = new ObjectMapper();
-        logger.info("RecommendationService инициализирован с скриптом: " + scriptPath);
+        logger.info("RecommendationService инициализирован с Python: " + this.pythonExecutable + ", скрипт: " + this.scriptPath);
     }
 
     private static String getDefaultScriptPath() {
-        String projectRoot = System.getProperty("user.dir");
-        return Paths.get(projectRoot, "ML-Recommendation", "recommendation_engine.py").toString();
+        return resolvePath(Paths.get("ML-Recommendation", "recommendation_engine.py").toString());
+    }
+
+    private static String resolvePath(String path) {
+        if (path == null || path.isBlank()) {
+            return path;
+        }
+
+        Path candidate = Paths.get(path);
+        if (candidate.isAbsolute()) {
+            return candidate.normalize().toString();
+        }
+
+        Path userDir = Paths.get(System.getProperty("user.dir"));
+        Path resolved = userDir.resolve(path).normalize();
+        if (Files.exists(resolved)) {
+            return resolved.toString();
+        }
+
+        Path current = userDir;
+        for (int i = 0; i < 4 && current != null; i++) {
+            resolved = current.resolve(path).normalize();
+            if (Files.exists(resolved)) {
+                return resolved.toString();
+            }
+            current = current.getParent();
+        }
+
+        // Если файл ещё не найден, возвращаем путь относительно рабочей директории,
+        // чтобы последующая проверка могла отловить ошибку и залогировать путь.
+        return userDir.resolve(path).normalize().toString();
+    }
+
+    private static String resolvePythonExecutable(String candidateExecutable) {
+        if (candidateExecutable == null || candidateExecutable.isBlank()) {
+            candidateExecutable = "python";
+        }
+
+        if (isCommandAvailable(candidateExecutable)) {
+            return candidateExecutable;
+        }
+
+        if (!"py".equalsIgnoreCase(candidateExecutable) && isCommandAvailable("py")) {
+            logger.info("Python executable '" + candidateExecutable + "' недоступен, используется 'py'");
+            return "py";
+        }
+
+        return candidateExecutable;
+    }
+
+    private static boolean isCommandAvailable(String command) {
+        try {
+            ProcessBuilder builder = new ProcessBuilder(command, "--version");
+            Process process = builder.start();
+            int exitCode = process.waitFor();
+            return exitCode == 0;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     // === ОСНОВНЫЕ МЕТОДЫ ===
@@ -215,6 +274,7 @@ public class RecommendationServiceImpl implements RecommendationService {
             if (rootNode.has("success") && !rootNode.get("success").asBoolean()) {
                 String errorMsg = rootNode.has("error") ? rootNode.get("error").asText() : "unknown";
                 logger.warning("Python-скрипт вернул success=false. Ошибка: " + errorMsg);
+                triggerRetrainIfNeeded(errorMsg);
                 return Collections.emptyList();
             }
 
@@ -273,6 +333,26 @@ public class RecommendationServiceImpl implements RecommendationService {
         } catch (Exception e) {
             logger.log(Level.WARNING, "Ошибка проверки доступности системы рекомендаций", e);
             return false;
+        }
+    }
+
+    private void triggerRetrainIfNeeded(String errorMsg) {
+        if (modelManagementService == null) {
+            return;
+        }
+
+        if (errorMsg == null) {
+            return;
+        }
+
+        String normalized = errorMsg.toLowerCase();
+        if (normalized.contains("требуется переобучение") || normalized.contains("не найдена") || normalized.contains("устарела") || normalized.contains("не удалось загрузить")) {
+            boolean started = modelManagementService.retrainModel();
+            if (started) {
+                logger.info("Автоматическое переобучение запускается из-за ошибки рекомендаций: " + errorMsg);
+            } else {
+                logger.info("Автоматическое переобучение уже выполняется: " + errorMsg);
+            }
         }
     }
 

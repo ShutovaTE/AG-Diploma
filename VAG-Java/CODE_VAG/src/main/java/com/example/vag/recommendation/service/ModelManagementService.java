@@ -59,10 +59,68 @@ public class ModelManagementService {
 
     // === КОНСТРУКТОР ===
     public ModelManagementService(String pythonExecutable, String modelTrainerScriptPath, String modelCacheDir) {
-        this.pythonExecutable = pythonExecutable;
-        this.modelTrainerScriptPath = modelTrainerScriptPath;
-        this.modelCacheDir = modelCacheDir;
-        this.trainingLogPath = Paths.get(modelCacheDir, "training.log").toString();
+        this.pythonExecutable = resolvePythonExecutable(pythonExecutable);
+        this.modelTrainerScriptPath = resolvePath(modelTrainerScriptPath);
+        this.modelCacheDir = resolvePath(modelCacheDir);
+        this.trainingLogPath = Paths.get(this.modelCacheDir, "training.log").toString();
+        logger.info("ModelManagementService инициализирован с Python: " + this.pythonExecutable + ", тренером: " + this.modelTrainerScriptPath);
+        logger.info("ModelManagementService использует кэш модели: " + this.modelCacheDir);
+    }
+
+    private static String resolvePath(String path) {
+        if (path == null || path.isBlank()) {
+            return path;
+        }
+
+        Path candidate = Paths.get(path);
+        if (candidate.isAbsolute()) {
+            return candidate.normalize().toString();
+        }
+
+        Path userDir = Paths.get(System.getProperty("user.dir"));
+        Path resolved = userDir.resolve(path).normalize();
+        if (Files.exists(resolved)) {
+            return resolved.toString();
+        }
+
+        Path current = userDir;
+        for (int i = 0; i < 4 && current != null; i++) {
+            resolved = current.resolve(path).normalize();
+            if (Files.exists(resolved)) {
+                return resolved.toString();
+            }
+            current = current.getParent();
+        }
+
+        return userDir.resolve(path).normalize().toString();
+    }
+
+    private static String resolvePythonExecutable(String candidateExecutable) {
+        if (candidateExecutable == null || candidateExecutable.isBlank()) {
+            candidateExecutable = "python";
+        }
+
+        if (isCommandAvailable(candidateExecutable)) {
+            return candidateExecutable;
+        }
+
+        if (!"py".equalsIgnoreCase(candidateExecutable) && isCommandAvailable("py")) {
+            logger.info("Python executable '" + candidateExecutable + "' недоступен, используется 'py'");
+            return "py";
+        }
+
+        return candidateExecutable;
+    }
+
+    private static boolean isCommandAvailable(String command) {
+        try {
+            ProcessBuilder builder = new ProcessBuilder(command, "--version");
+            Process process = builder.start();
+            int exitCode = process.waitFor();
+            return exitCode == 0;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     // === МЕТОДЫ УПРАВЛЕНИЯ МОДЕЛЬЮ ===

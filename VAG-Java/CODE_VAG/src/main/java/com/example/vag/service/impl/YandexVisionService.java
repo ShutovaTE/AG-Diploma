@@ -77,52 +77,27 @@ public class YandexVisionService {
         List<String> categories = new ArrayList<>();
 
         if (!isConfigured()) {
-            log.warn("Yandex Vision не настроен. Определение категорий пропущено.");
             return categories;
         }
 
-        log.debug("Yandex Vision detectCategories: starting request for image={}", file != null ? file.getOriginalFilename() : "<unknown>");
         try {
             String base64Image = encodeFileToBase64(file);
             String requestBody = String.format(
-                    "{\"folderId\":\"%s\",\"analyze_specs\":[{\"content\":\"%s\",\"features\":[{\"type\":\"CLASSIFICATION\",\"classificationConfig\":{\"model\":\"general\"}}]}]}",
+                    "{\"folderId\":\"%s\",\"analyze_specs\":[{\"content\":\"%s\",\"features\":[{\"type\":\"LABEL_DETECTION\",\"maxResults\":10}]}]}",
                     folderId, base64Image
             );
             JsonNode root = executeVisionRequestWithRetry(requestBody);
             if (root == null) {
-                log.warn("Yandex Vision returned null response for image={}", file != null ? file.getOriginalFilename() : "<unknown>");
                 return categories;
             }
             JsonNode results = root.path("results");
             if (results.isArray() && results.size() > 0) {
-                JsonNode analysis = results.get(0).path("results").get(0);
-                if (analysis.has("classification")) {
-                    JsonNode classes = analysis.path("classification").path("classes");
-                    if (classes.isArray()) {
-                        for (JsonNode cls : classes) {
-                            if (cls.path("confidence").asDouble() > 0.5) {
-                                categories.add(cls.path("name").asText());
-                            }
-                        }
-                    }
-                } else if (analysis.has("labelAnnotations")) {
-                    for (JsonNode label : analysis.path("labelAnnotations")) {
-                        if (label.path("confidence").asDouble() > 0.5) {
-                            categories.add(label.path("description").asText());
-                        }
-                    }
-                } else if (analysis.has("objects")) {
-                    for (JsonNode objectNode : analysis.path("objects")) {
-                        if (objectNode.has("name")) {
-                            categories.add(objectNode.path("name").asText());
-                        }
+                JsonNode labels = results.get(0).path("results").get(0).path("labelAnnotations");
+                for (JsonNode label : labels) {
+                    if (label.path("confidence").asDouble() > 0.5) {
+                        categories.add(label.path("description").asText());
                     }
                 }
-            }
-            if (!categories.isEmpty()) {
-                log.info("Yandex Vision detected categories for image={}: {}", file != null ? file.getOriginalFilename() : "<unknown>", categories);
-            } else {
-                log.info("Yandex Vision вернул 0 категорий для image={}", file != null ? file.getOriginalFilename() : "<unknown>");
             }
         } catch (Exception e) {
             log.error("Ошибка при определении категорий через Yandex Vision", e);
@@ -145,7 +120,6 @@ public class YandexVisionService {
 
             try (Response response = httpClient.newCall(request).execute()) {
                 if (response.isSuccessful()) {
-                    log.debug("Yandex Vision request successful on attempt={}", attempt);
                     ResponseBody body = response.body();
                     if (body == null) {
                         log.warn("Yandex Vision вернул пустой ответ (attempt={})", attempt);
