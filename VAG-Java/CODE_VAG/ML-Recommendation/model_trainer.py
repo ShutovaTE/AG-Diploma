@@ -284,18 +284,18 @@ def print_model_info():
 
 def main():
     """Главная функция скрипта"""
-    force_retrain = '--force' in sys.argv
+    force = '--force' in sys.argv
     
     if '--info' in sys.argv:
         print_model_info()
         return
     
-    if force_retrain:
+    if force:
         log_message("Флаг --force активирован. Переобучение модели.")
     else:
         log_message("Начало обучения модели (используйте --force для принудительного переобучения)")
     
-    stats = train_and_save_model(force=force_retrain)
+    stats = train_and_save_model(force=force)
     
     if not stats.get('success'):
         sys.exit(1)

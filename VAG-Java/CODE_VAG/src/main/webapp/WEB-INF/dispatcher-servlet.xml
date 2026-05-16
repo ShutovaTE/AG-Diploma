@@ -229,29 +229,28 @@
         <constructor-arg ref="imageHashService"/>
     </bean>
 
-
     <bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
         <property name="maxUploadSize" value="-1"/>
     </bean>
 
     <!-- === СЕРВИС УПРАВЛЕНИЯ МОДЕЛЬЮ === -->
-    <bean id="modelManagementService" class="com.example.vag.recommendation.service.ModelManagementService">
-        <constructor-arg value="python"/>
-        <constructor-arg value="ML-Recommendation/model_trainer.py"/>
-        <constructor-arg value="ML-Recommendation/model_cache"/>
+    <bean id="modelManagementService"
+        class="com.example.vag.recommendation.service.ModelManagementService">
+        <constructor-arg
+                value="D:/Git/AG-Diploma/VAG-Java/venv/Scripts/python.exe"/>
+        <constructor-arg
+                value="D:/Git/AG-Diploma/VAG-Java/CODE_VAG/ML-Recommendation/model_trainer.py"/>
+        <constructor-arg
+                value="D:/Git/AG-Diploma/VAG-Java/CODE_VAG/ML-Recommendation/model_cache"/>
     </bean>
 
     <!-- === СЕРВИС РЕКОМЕНДАЦИЙ === -->
-    <bean id="recommendationService" class="com.example.vag.recommendation.service.RecommendationServiceImpl">
-        <constructor-arg value="python"/>
-        <constructor-arg value="ML-Recommendation/recommendation_engine.py"/>
-        <constructor-arg ref="modelManagementService"/>
-    </bean>
-
-    <bean id="recommendationController"
-          class="com.example.vag.recommendation.controller.RecommendationController">
-        <constructor-arg ref="recommendationService"/>
-        <constructor-arg ref="userService"/>
+    <bean id="recommendationService"
+        class="com.example.vag.recommendation.service.RecommendationServiceImpl">
+        <constructor-arg
+                value="D:/Git/AG-Diploma/VAG-Java/venv/Scripts/python.exe"/>
+        <constructor-arg
+                value="D:/Git/AG-Diploma/VAG-Java/CODE_VAG/ML-Recommendation/recommendation_engine.py"/>
         <constructor-arg ref="modelManagementService"/>
     </bean>
 

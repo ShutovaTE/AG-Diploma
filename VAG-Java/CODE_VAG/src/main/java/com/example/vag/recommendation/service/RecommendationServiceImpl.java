@@ -41,7 +41,7 @@ public class RecommendationServiceImpl implements RecommendationService {
     // === КОНСТРУКТОРЫ ===
 
     public RecommendationServiceImpl() {
-        this("python", getDefaultScriptPath(), null);
+        this("D:/Git/AG-Diploma/VAG-Java/venv/Scripts/python.exe", getDefaultScriptPath(), null);
     }
 
     public RecommendationServiceImpl(String pythonExecutable, String scriptPath) {

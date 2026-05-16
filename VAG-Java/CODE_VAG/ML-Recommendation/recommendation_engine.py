@@ -269,7 +269,7 @@ class SimpleSVD:
         max_user_id = int(np.max(user_ids)) if len(user_ids) > 0 else 0
         max_item_id = int(np.max(item_ids)) if len(item_ids) > 0 else 0
         
-        if max_user_id == 0 or max_item_id == 0:
+        if len(user_ids) == 0 or len(item_ids) == 0:
             return  # Нет данных для обучения
         
         # Инициализация факторов и смещений (+1 для 1-based индексации)
@@ -524,12 +524,12 @@ def evaluate_model(svd, test_data, artworks_df):
 # 7. Вспомогательные функции для интеграции с Java
 # =============================================================================
 
-def get_recommendations_for_user_json(user_id, connection, top_n=10, force_retrain=False):
+def get_recommendations_for_user_json(user_id, connection, top_n=10, force=False):
     import json
     user_id = int(user_id)
 
     # Проверяем кэш
-    if not force_retrain and is_cache_valid():
+    if not force and is_cache_valid():
         svd, content_sim, artworks_df, interactions_df = load_model()
     else:
         # Загружаем данные и обучаем модель
@@ -812,7 +812,7 @@ if __name__ == "__main__":
     import sys
     
     # Обработка аргументов командной строки
-    force = '--force_retrain' in sys.argv
+    force = '--force' in sys.argv
     extended = '--extended' in sys.argv
     
     if len(sys.argv) > 1 and sys.argv[1] == "--user_id":
@@ -826,7 +826,7 @@ if __name__ == "__main__":
             # Старый режим: обучение + получение (для обратной совместимости)
             connection = get_db_connection()
             if connection:
-                print(get_recommendations_for_user_json(user_id, connection, top_n=10, force_retrain=force))
+                print(get_recommendations_for_user_json(user_id, connection, top_n=10, force=force))
                 connection.close()
     else:
         main()
