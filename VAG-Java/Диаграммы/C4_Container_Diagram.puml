@@ -1,0 +1,34 @@
+@startuml C4 Container Diagram - Virtual Art Gallery
+
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+title Virtual Art Gallery - Container Diagram
+
+Person(visitor, "Посетитель", "Незарегистрированный пользователь")
+Person(artist, "Художник", "Авторизованный пользователь")
+Person(admin, "Администратор", "Администратор и модератор")
+
+System_Boundary(vag_system, "Virtual Art Gallery") {
+    Container(web_browser, "Web Browser", "HTML5/CSS/JavaScript/Thymeleaf", "Интерфейс пользователя для просмотра галереи, управления произведениями и выставками")
+    Container(spring_web, "Spring MVC Web Application", "Spring 5.3.20, Java 11", "Основное приложение с REST API и обработкой бизнес-логики")
+    ContainerDb(mysql_db, "MySQL Database", "MySQL 8.0.33", "Хранилище пользователей, произведений, выставок, комментариев, лайков, уведомлений")
+    Container(minio_storage, "MinIO File Storage", "MinIO Object Storage", "Хранилище файлов изображений произведений искусства")
+    Container(ml_service, "ML Recommendation Service", "Python, OpenCLIP, FastAPI", "Система рекомендаций на основе признаков изображений")
+}
+
+Rel(visitor, web_browser, "просматривает")
+Rel(artist, web_browser, "управляет контентом")
+Rel(admin, web_browser, "администрирует")
+
+Rel(web_browser, spring_web, "HTTP/HTTPS запросы")
+Rel(spring_web, mysql_db, "JDBC запросы", "query/update")
+Rel(spring_web, minio_storage, "REST API", "S3-compatible")
+Rel(spring_web, ml_service, "HTTP запросы", "получение рекомендаций")
+
+System_Ext(mysql_ext, "MySQL", "Персистентное хранилище данных")
+System_Ext(minio_ext, "MinIO", "Объектное хранилище")
+
+Rel(mysql_db, mysql_ext, "")
+Rel(minio_storage, minio_ext, "")
+
+@enduml

@@ -1,0 +1,25 @@
+@startuml C4 Context Diagram - Virtual Art Gallery
+
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+title Virtual Art Gallery - Context Diagram
+
+Person(visitor, "Посетитель", "Незарегистрированный пользователь")
+Person(artist, "Художник", "Авторизованный пользователь")
+Person(admin, "Администратор", "Администратор и модератор")
+
+System(vag, "VAG - Virtual Art Gallery", "Платформа для создания и просмотра виртуальных выставок произведений искусства")
+
+System_Ext(mysql, "MySQL Database", "Хранилище данных пользователей, произведений и выставок")
+System_Ext(minio, "MinIO File Storage", "Объектное хранилище для загрузки и хранения изображений произведений")
+System_Ext(ml_engine, "ML Recommendation Engine", "Система рекомендаций на основе признаков изображений (OpenCLIP)")
+
+Rel(visitor, vag, "просматривает выставки, произведения, категории")
+Rel(artist, vag, "загружает произведения, создает выставки, управляет данными")
+Rel(admin, vag, "модерирует контент, управляет категориями, администрирует систему")
+
+Rel(vag, mysql, "читает/пишет данные")
+Rel(vag, minio, "загружает/скачивает файлы")
+Rel(vag, ml_engine, "получает рекомендации произведений")
+
+@enduml

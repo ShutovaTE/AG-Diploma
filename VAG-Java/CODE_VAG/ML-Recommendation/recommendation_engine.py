@@ -121,16 +121,6 @@ def load_data_from_db(connection):
     """
     likes_df = pd.read_sql(likes_query, connection)
     
-    # Загрузка просмотров работ пользователями
-    # Примечание: если у вас есть таблица views, раскомментируйте этот блок
-    # views_query = """
-    #     SELECT 
-    #         v.user_id,
-    #         v.artwork_id
-    #     FROM views v
-    # """
-    # views_df = pd.read_sql(views_query, connection)
-    
     # Загрузка комментариев
     comments_query = """
         SELECT 

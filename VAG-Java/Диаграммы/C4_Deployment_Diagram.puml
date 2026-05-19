@@ -1,0 +1,44 @@
+@startuml C4 Deployment Diagram - Virtual Art Gallery
+
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Deployment.puml
+
+title Virtual Art Gallery - Deployment Diagram
+
+Deployment_Node(user_device, "User Device", "Windows/macOS/Linux") {
+    Container(web_browser, "Web Browser", "Chrome/Firefox/Safari", "")
+}
+
+Deployment_Node(app_server, "Application Server", "Linux/Windows Server") {
+    Deployment_Node(java_container, "Java Runtime", "JDK 11") {
+        Container(spring_app, "Spring MVC Application", "Spring 5.3.20 WAR", "")
+    }
+}
+
+Deployment_Node(ml_server, "ML Server", "Linux") {
+    Deployment_Node(python_runtime, "Python Runtime", "Python 3.8+") {
+        Container(ml_service, "ML Recommendation Engine", "Python + OpenCLIP + FastAPI", "")
+    }
+}
+
+Deployment_Node(storage_server, "Storage Server", "Linux") {
+    Deployment_Node(minio_docker, "MinIO Container", "Docker") {
+        Container(minio_instance, "MinIO Instance", "S3-compatible Storage", "")
+    }
+}
+
+Deployment_Node(database_server, "Database Server", "Linux/Windows") {
+    Deployment_Node(mysql_docker, "MySQL Container", "Docker") {
+        ContainerDb(mysql_instance, "MySQL 8.0", "MySQL Database", "")
+    }
+}
+
+Rel(user_device, app_server, "HTTPS", "")
+Rel(app_server, database_server, "TCP 3306", "JDBC")
+Rel(app_server, storage_server, "HTTPS", "S3 API")
+Rel(app_server, ml_server, "HTTPS", "REST API")
+Rel(java_container, spring_app, "")
+Rel(python_runtime, ml_service, "")
+Rel(minio_docker, minio_instance, "")
+Rel(mysql_docker, mysql_instance, "")
+
+@enduml

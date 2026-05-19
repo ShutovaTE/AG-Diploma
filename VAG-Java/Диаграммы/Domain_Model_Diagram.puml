@@ -1,0 +1,178 @@
+@startuml Domain Model - Virtual Art Gallery
+
+!define ENTITY_COLOR #E3F2FD
+!define VALUE_OBJECT_COLOR #F3E5F5
+!define SERVICE_COLOR #FFF3E0
+!define BOUNDARY_COLOR #E8F5E9
+
+title Virtual Art Gallery - Domain Model Diagram
+
+package "User Domain" {
+    entity User as user <<entity>> {
+        id: Long
+        email: String
+        password: String
+        firstName: String
+        lastName: String
+        bio: String
+        createdAt: LocalDateTime
+        role: Role
+    }
+
+    entity Role as role <<value-object>> {
+        id: Long
+        name: RoleName (VISITOR, ARTIST, ADMIN)
+        permissions: Set<String>
+    }
+
+    User --> Role : has one
+}
+
+package "Artwork Domain" {
+    entity Artwork as artwork <<entity>> {
+        id: Long
+        title: String
+        description: String
+        imageUrl: String
+        artistId: Long
+        categoryId: Long
+        status: ArtworkStatus
+        createdAt: LocalDateTime
+        updatedAt: LocalDateTime
+        isPublished: Boolean
+    }
+
+    entity Category as category <<entity>> {
+        id: Long
+        name: String
+        description: String
+        imageUrl: String
+        artworksCount: Integer
+    }
+
+    entity ImageHash as image_hash <<value-object>> {
+        id: Long
+        artworkId: Long
+        features: float[]
+        modelVersion: String
+        extractedAt: LocalDateTime
+    }
+
+    Artwork --> Category : belongs to
+    Artwork --> ImageHash : has one
+}
+
+package "Exhibition Domain" {
+    entity Exhibition as exhibition <<entity>> {
+        id: Long
+        title: String
+        description: String
+        artistId: Long
+        createdAt: LocalDateTime
+        updatedAt: LocalDateTime
+        isPublished: Boolean
+    }
+
+    entity ExhibitionArtwork as exhibit_artwork <<relationship>> {
+        id: Long
+        exhibitionId: Long
+        artworkId: Long
+        order: Integer
+    }
+
+    Exhibition --> ExhibitionArtwork : contains
+    ExhibitionArtwork --> Artwork : references
+}
+
+package "Interaction Domain" {
+    entity Comment as comment <<entity>> {
+        id: Long
+        artworkId: Long
+        authorId: Long
+        text: String
+        createdAt: LocalDateTime
+        updatedAt: LocalDateTime
+    }
+
+    entity Like as like <<entity>> {
+        id: Long
+        artworkId: Long
+        userId: Long
+        createdAt: LocalDateTime
+    }
+
+    entity Notification as notification <<entity>> {
+        id: Long
+        userId: Long
+        type: NotificationType
+        message: String
+        relatedObjectId: Long
+        isRead: Boolean
+        createdAt: LocalDateTime
+    }
+
+    Comment --> Artwork : on
+    Comment --> User : by
+    Like --> Artwork : on
+    Like --> User : by
+    Notification --> User : for
+}
+
+package "Value Objects" {
+    object ArtworkStatus <<value-object>> {
+        PENDING
+        APPROVED
+        REJECTED
+        ARCHIVED
+    }
+
+    object NotificationType <<value-object>> {
+        ARTWORK_APPROVED
+        ARTWORK_REJECTED
+        NEW_COMMENT
+        NEW_LIKE
+        ADMIN_MESSAGE
+    }
+
+    object RoleName <<value-object>> {
+        ROLE_VISITOR
+        ROLE_ARTIST
+        ROLE_ADMIN
+    }
+}
+
+Artwork --> ArtworkStatus : has
+Notification --> NotificationType : has
+Role --> RoleName : has
+
+note right of Artwork
+  **Artwork** - центральная сущность
+  Может быть:
+  - PENDING (на модерации)
+  - APPROVED (опубликовано)
+  - REJECTED (отклонено)
+  - ARCHIVED (архивировано)
+end note
+
+note right of User
+  **User** - сущность пользователя
+  Роли:
+  - VISITOR (незарегистрированный)
+  - ARTIST (авторизованный)
+  - ADMIN (администратор)
+end note
+
+note right of Exhibition
+  **Exhibition** - выставка
+  Содержит несколько произведений
+  Создается художником
+  Может быть опубликована
+end note
+
+note right of ImageHash
+  **ImageHash** - признаки изображения
+  Получены от ML Engine (OpenCLIP)
+  Используются для рекомендаций
+end note
+
+@enduml

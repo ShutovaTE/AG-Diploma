@@ -1,0 +1,172 @@
+@startuml Virtual Art Gallery - Key Sequences
+
+!define PARTICIPANT_COLOR #FFFFFF
+!define BOUNDARY_COLOR #E1F5FE
+!define ENTITY_COLOR #FFF3E0
+!define DATABASE_COLOR #F3E5F5
+
+title Virtual Art Gallery - Диаграммы последовательности
+
+== Сценарий 1: Регистрация и вход Художника ==
+
+actor Художник as artist
+participant "Web Browser" as web
+participant "AuthController" as auth_ctrl
+participant "UserService" as user_svc
+participant "UserRepository" as user_repo
+database "MySQL DB" as db
+
+artist -> web: Заходит на сайт /register
+web -> auth_ctrl: GET /register
+auth_ctrl -> web: HTML форма регистрации
+artist -> web: Заполняет форму (email, пароль)
+web -> auth_ctrl: POST /register
+auth_ctrl -> user_svc: registerUser(userData)
+user_svc -> user_svc: Валидирует данные
+user_svc -> user_repo: save(User)
+user_repo -> db: INSERT User (ROLE: ARTIST)
+db -> user_repo: OK
+user_repo -> user_svc: Пользователь сохранен
+user_svc -> auth_ctrl: ✓ Успешно
+auth_ctrl -> web: Redirect /login
+web -> artist: Страница входа
+artist -> web: Вводит email и пароль
+web -> auth_ctrl: POST /login
+auth_ctrl -> user_svc: authenticate(email, password)
+user_svc -> user_repo: findByEmail(email)
+user_repo -> db: SELECT * FROM User WHERE email=?
+db -> user_repo: User data
+user_repo -> user_svc: User object
+user_svc -> user_svc: Проверяет пароль
+user_svc -> auth_ctrl: ✓ Аутентификация успешна
+auth_ctrl -> web: Создает session
+web -> artist: Redirect /home (авторизован как Художник)
+
+== Сценарий 2: Художник загружает произведение ==
+
+artist -> web: Перейти на /upload
+web -> auth_ctrl: GET /upload
+auth_ctrl -> web: Форма загрузки произведения
+artist -> web: Выбирает изображение, заполняет название, категорию
+web -> web: Загружает файл локально
+artist -> web: Нажимает "Загрузить"
+web -> auth_ctrl: multipart POST /upload
+auth_ctrl -> auth_ctrl: Проверяет аутентификацию (ROLE: ARTIST)
+auth_ctrl -> "UploadController" as upload_ctrl: handleUpload()
+upload_ctrl -> "ArtworkService" as artwork_svc: createArtwork(formData)
+
+artwork_svc -> artwork_svc: Валидирует данные
+artwork_svc -> "MinIO Client" as minio_client: uploadFile(imageFile)
+minio_client -> "MinIO Storage" as minio: PUT /artwork-images/image-123.jpg
+minio -> minio_client: ✓ Загружено
+minio_client -> artwork_svc: fileUrl
+
+artwork_svc -> "ImageFeatureService" as image_feature: extractFeatures(imageUrl)
+image_feature -> "ML Client" as ml_client: POST /extract (imageUrl)
+ml_client -> "ML Engine" as ml_engine: Анализирует изображение (OpenCLIP)
+ml_engine -> ml_engine: Получает vector features
+ml_engine -> ml_client: features vector
+ml_client -> image_feature: features
+
+image_feature -> "ImageHashRepository" as image_repo: save(ImageHash)
+image_repo -> db: INSERT ImageHash
+db -> image_repo: OK
+image_repo -> image_feature: ✓
+
+artwork_svc -> "ArtworkRepository" as artwork_repo: save(Artwork)
+artwork_repo -> db: INSERT Artwork
+db -> artwork_repo: OK
+artwork_repo -> artwork_svc: Artwork ID
+
+artwork_svc -> "NotificationService" as notif_svc: notifyAdmins(newArtwork)
+notif_svc -> "NotificationRepository" as notif_repo: save(Notification)
+notif_repo -> db: INSERT Notification
+db -> notif_repo: OK
+
+artwork_svc -> upload_ctrl: ✓ Произведение загружено
+upload_ctrl -> auth_ctrl: ✓
+auth_ctrl -> web: Redirect /artworks/{id}
+web -> artist: Произведение успешно загружено!
+
+== Сценарий 3: Посетитель просматривает произведение и получает рекомендации ==
+
+actor Посетитель as visitor
+participant "Web Browser V" as web_v
+participant "ArtworkController" as artwork_ctrl
+participant "RecommendationController" as rec_ctrl
+participant "RecommendationService" as rec_svc
+
+visitor -> web_v: Кликает на произведение
+web_v -> artwork_ctrl: GET /artworks/{id}
+artwork_ctrl -> artwork_ctrl: Проверяет доступ (public)
+artwork_ctrl -> artwork_repo: findById(id)
+artwork_repo -> db: SELECT FROM Artwork WHERE id=?
+db -> artwork_repo: Artwork data
+artwork_repo -> artwork_ctrl: Artwork object
+
+artwork_ctrl -> web_v: HTML страница произведения
+web_v -> visitor: Отображает произведение
+
+par Параллельно загружаются рекомендации
+    web_v -> rec_ctrl: GET /api/recommendations/{artworkId}
+    rec_ctrl -> rec_svc: getRecommendations(artworkId)
+    rec_svc -> image_repo: findByArtworkId(artworkId)
+    image_repo -> db: SELECT FROM ImageHash WHERE artwork_id=?
+    db -> image_repo: ImageHash data
+    image_repo -> rec_svc: features vector
+    
+    rec_svc -> ml_client: POST /recommend (features)
+    ml_client -> ml_engine: Ищет похожие в index
+    ml_engine -> ml_engine: Вычисляет сходство
+    ml_engine -> ml_client: [id1, id2, id3, ...] похожих произведений
+    ml_client -> rec_svc: recommended IDs
+    
+    rec_svc -> artwork_repo: findByIds([id1, id2, id3])
+    artwork_repo -> db: SELECT FROM Artwork WHERE id IN (...)
+    db -> artwork_repo: Artworks data
+    artwork_repo -> rec_svc: List<Artwork>
+    
+    rec_svc -> rec_ctrl: RecommendationDTO
+    rec_ctrl -> web_v: JSON [recommendations]
+    web_v -> visitor: Отображает рекомендуемые произведения
+end
+
+== Сценарий 4: Администратор модерирует произведение ==
+
+actor Администратор as admin
+participant "Web Browser A" as web_a
+participant "AdminController" as admin_ctrl
+participant "ModerationService" as mod_svc
+
+admin -> web_a: Перейти в админ панель /admin
+web_a -> admin_ctrl: GET /admin
+admin_ctrl -> admin_ctrl: Проверяет ROLE: ADMIN
+admin_ctrl -> web_a: Админ панель
+web_a -> admin: Отображает список на модерацию
+
+admin -> web_a: Нажимает "Одобрить" на произведение
+web_a -> admin_ctrl: POST /admin/approve/{artworkId}
+admin_ctrl -> admin_ctrl: Проверяет аутентификацию (ROLE: ADMIN)
+admin_ctrl -> mod_svc: approveArtwork(artworkId)
+
+mod_svc -> artwork_repo: findById(artworkId)
+artwork_repo -> db: SELECT FROM Artwork WHERE id=?
+db -> artwork_repo: Artwork
+artwork_repo -> mod_svc: Artwork object
+
+mod_svc -> mod_svc: Устанавливает status = APPROVED
+mod_svc -> artwork_repo: update(artwork)
+artwork_repo -> db: UPDATE Artwork SET status=APPROVED
+db -> artwork_repo: OK
+
+mod_svc -> notif_svc: notifyArtist(artworkApproved)
+notif_svc -> notif_repo: save(Notification)
+notif_repo -> db: INSERT Notification
+db -> notif_repo: OK
+
+notif_svc -> mod_svc: ✓
+
+mod_svc -> admin_ctrl: ✓ Произведение одобрено
+admin_ctrl -> web_a: Произведение опубликовано!
+
+@enduml
