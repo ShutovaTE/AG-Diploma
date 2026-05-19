@@ -20,9 +20,7 @@
   - 🗄️ MySQL Database - хранилище данных
   - 📦 MinIO File Storage - объектное хранилище для изображений
   - 🤖 ML Recommendation Engine - система рекомендаций на базе OpenCLIP
-
----
-
+- 🔎 Yandex Vision API - внешний сервис анализа изображений для модуля модерирования публикаций
 ### 2. **C4_Container_Diagram.puml** - Диаграмма контейнеров
 Показывает основные контейнеры (приложения, базы данных, сервисы) внутри системы и их взаимодействие.
 
@@ -34,6 +32,7 @@
 - **Spring MVC Web Application** (Spring 5.3.20, Java 11)
   - Основное приложение с REST API
   - Обработка бизнес-логики
+  - Встроенный модуль модерирования публикаций
   - Интеграция со всеми компонентами
 
 - **MySQL Database** (MySQL 8.0.33)
@@ -98,6 +97,7 @@
 #### **Integration Layer**
 - `MinIO Client` - интеграция с MinIO для управления файлами
 - `ML Engine Client` - HTTP клиент для обращения к Python ML-сервису
+- `Yandex Vision Client` - HTTP клиент для обращения к Yandex Vision API при модерировании
 - `DTO Objects` - объекты передачи данных
 
 #### **Utilities & Security**

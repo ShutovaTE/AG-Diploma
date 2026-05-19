@@ -10,7 +10,7 @@ Person(admin, "Администратор", "Администратор и мо�
 
 System_Boundary(vag_system, "Virtual Art Gallery") {
     Container(web_browser, "Web Browser", "HTML5/CSS/JavaScript/Thymeleaf", "Интерфейс пользователя для просмотра галереи, управления произведениями и выставками")
-    Container(spring_web, "Spring MVC Web Application", "Spring 5.3.20, Java 11", "Основное приложение с REST API и обработкой бизнес-логики")
+    Container(spring_web, "Spring MVC Web Application", "Spring 5.3.20, Java 11", "Основное приложение с REST API, обработкой бизнес-логики и встроенным модулем модерирования")
     ContainerDb(mysql_db, "MySQL Database", "MySQL 8.0.33", "Хранилище пользователей, произведений, выставок, комментариев, лайков, уведомлений")
     Container(minio_storage, "MinIO File Storage", "MinIO Object Storage", "Хранилище файлов изображений произведений искусства")
     Container(ml_service, "ML Recommendation Service", "Python, OpenCLIP, FastAPI", "Система рекомендаций на основе признаков изображений")
@@ -24,9 +24,11 @@ Rel(web_browser, spring_web, "HTTP/HTTPS запросы")
 Rel(spring_web, mysql_db, "JDBC запросы", "query/update")
 Rel(spring_web, minio_storage, "REST API", "S3-compatible")
 Rel(spring_web, ml_service, "HTTP запросы", "получение рекомендаций")
+Rel(spring_web, yandex_ext, "HTTP REST API", "анализ изображений для модерации")
 
 System_Ext(mysql_ext, "MySQL", "Персистентное хранилище данных")
 System_Ext(minio_ext, "MinIO", "Объектное хранилище")
+System_Ext(yandex_ext, "Yandex Vision API", "Внешний сервис визуального анализа для модерации публикаций")
 
 Rel(mysql_db, mysql_ext, "")
 Rel(minio_storage, minio_ext, "")

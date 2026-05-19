@@ -13,6 +13,7 @@ System(vag, "VAG - Virtual Art Gallery", "Платформа для создан
 System_Ext(mysql, "MySQL Database", "Хранилище данных пользователей, произведений и выставок")
 System_Ext(minio, "MinIO File Storage", "Объектное хранилище для загрузки и хранения изображений произведений")
 System_Ext(ml_engine, "ML Recommendation Engine", "Система рекомендаций на основе признаков изображений (OpenCLIP)")
+System_Ext(yandex, "Yandex Vision API", "Внешний сервис визуального анализа для модерации изображений")
 
 Rel(visitor, vag, "просматривает выставки, произведения, категории")
 Rel(artist, vag, "загружает произведения, создает выставки, управляет данными")
@@ -21,5 +22,6 @@ Rel(admin, vag, "модерирует контент, управляет кат�
 Rel(vag, mysql, "читает/пишет данные")
 Rel(vag, minio, "загружает/скачивает файлы")
 Rel(vag, ml_engine, "получает рекомендации произведений")
+Rel(vag, yandex, "отправляет изображения для модерации")
 
 @enduml

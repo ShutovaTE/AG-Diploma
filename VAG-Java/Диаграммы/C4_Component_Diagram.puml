@@ -26,6 +26,7 @@ System_Boundary(spring_app, "Spring MVC Web Application") {
     Component(notification_service, "NotificationService", "Service Layer", "Отправка уведомлений")
     Component(image_feature_service, "ImageFeatureService", "Service Layer", "Обработка признаков изображений")
     Component(recommendation_service, "RecommendationService", "Service Layer", "Получение рекомендаций от ML-движка")
+    Component(yandex_vision_client, "Yandex Vision Client", "External Service Integration", "Клиент для обращения к Yandex Vision API при модерировании")
 
     Component(user_repo, "UserRepository", "Data Access", "Доступ к данным пользователей")
     Component(artwork_repo, "ArtworkRepository", "Data Access", "Доступ к данным произведений")
@@ -60,6 +61,8 @@ Container_Ext(minio_storage, "MinIO Storage", "", "")
 
 Container_Ext(ml_engine, "ML Recommendation Service", "", "")
 
+Container_Ext(yandex_vision_api, "Yandex Vision API", "External Image Analysis Service", "")
+
 Rel(web_browser, home_controller, "HTTP GET /", "")
 Rel(web_browser, auth_controller, "HTTP /login /register", "")
 Rel(web_browser, artwork_controller, "HTTP /artworks", "")
@@ -91,6 +94,7 @@ Rel(moderation_service, artwork_repo, "использует")
 Rel(notification_service, notification_repo, "использует")
 Rel(image_feature_service, image_hash_repo, "использует")
 Rel(recommendation_service, ml_client, "использует")
+Rel(moderation_service, yandex_vision_client, "использует")
 
 Rel(user_repo, mysql, "читает/пишет")
 Rel(artwork_repo, mysql, "читает/пишет")
@@ -103,6 +107,7 @@ Rel(image_hash_repo, mysql, "читает/пишет")
 
 Rel(minio_client, minio_storage, "S3-compatible API")
 Rel(ml_client, ml_engine, "HTTP JSON запросы")
+Rel(yandex_vision_client, yandex_vision_api, "HTTP JSON запросы")
 
 Rel(user_repo, user_model, "работает с")
 Rel(artwork_repo, artwork_model, "работает с")
