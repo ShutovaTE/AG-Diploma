@@ -1,16 +1,16 @@
 {
   "version": "2.0",
-  "training_date": "2026-05-21T19:36:53.523728",
-  "training_duration_seconds": 0.7913210391998291,
+  "training_date": "2026-05-21T21:43:24.283592",
+  "training_duration_seconds": 0.6401717662811279,
   "data_statistics": {
-    "artworks_count": 53,
-    "likes_count": 42,
-    "comments_count": 4
+    "artworks_count": 54,
+    "likes_count": 40,
+    "comments_count": 5
   },
   "model_quality": {
     "precision_at_5": 0.275,
     "recall_at_5": 1.0,
-    "coverage_at_5": 0.16981132075471697
+    "coverage_at_5": 0.16666666666666666
   },
   "training_parameters": {
     "n_factors": 10,
