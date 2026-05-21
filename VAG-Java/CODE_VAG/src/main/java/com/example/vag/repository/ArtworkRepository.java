@@ -47,10 +47,8 @@ public interface ArtworkRepository extends JpaRepository<Artwork, Long> {
     List<Artwork> findByExhibitionId(@Param("exhibitionId") Long exhibitionId);
 
     @Query("SELECT DISTINCT a FROM Artwork a " +
-            "LEFT JOIN FETCH a.categories " +
             "LEFT JOIN FETCH a.user " +
-            "LEFT JOIN FETCH a.comments c " +
-            "LEFT JOIN FETCH c.user " +
+            "LEFT JOIN FETCH a.categories " +
             "WHERE a.id = :id")
     Optional<Artwork> findByIdWithComments(@Param("id") Long id);
 

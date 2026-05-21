@@ -102,8 +102,8 @@
                 <p class="help-text">Комментарии недоступны для публикаций, ожидающих проверки или отклоненных</p>
             </div>
 
-            <div th:if="${not #lists.isEmpty(artwork.comments)}" class="comments-list">
-                <div th:each="comment : ${artwork.comments}" class="comment">
+            <div th:if="${commentsList != null and !commentsList.isEmpty()}" class="comments-list">
+                <div th:each="comment : ${commentsList}" class="comment">
                     <div class="comment-header">
                         <a th:href="@{/user/profile/{id}(id=${comment.user.id})}"
                         th:text="${comment.user.username}"></a>
@@ -116,7 +116,7 @@
                 </div>
             </div>
 
-            <div th:if="${#lists.isEmpty(artwork.comments)}" class="no-comments">
+            <div th:if="${commentsList == null or commentsList.isEmpty()}" class="no-comments">
                 Нет комментариев
             </div>
         </div>

@@ -7,11 +7,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+
+import javax.imageio.ImageIO;
 
 @Service
 public class OpenClipService {
@@ -29,7 +33,7 @@ public class OpenClipService {
 
         File tmp = null;
         try {
-            tmp = File.createTempFile("openclip_", ".jpg");
+            tmp = resizeForOpenClip(file);
             file.transferTo(tmp);
 
             ProcessBuilder pb = new ProcessBuilder(pythonExecutable, scriptPath, "--image", tmp.getAbsolutePath());
@@ -97,5 +101,47 @@ public class OpenClipService {
         }
 
         return result;
+    }
+
+    private File resizeForOpenClip(MultipartFile file) throws IOException {
+
+        BufferedImage original =
+                javax.imageio.ImageIO.read(file.getInputStream());
+
+        int targetSize = 224;
+
+        BufferedImage resized =
+                new BufferedImage(
+                        targetSize,
+                        targetSize,
+                        BufferedImage.TYPE_INT_RGB
+                );
+
+        java.awt.Graphics2D g = resized.createGraphics();
+
+        g.drawImage(
+                original,
+                0,
+                0,
+                targetSize,
+                targetSize,
+                null
+        );
+
+        g.dispose();
+
+        File tmp =
+                File.createTempFile(
+                        "openclip_",
+                        ".jpg"
+                );
+
+        javax.imageio.ImageIO.write(
+                resized,
+                "jpg",
+                tmp
+        );
+
+        return tmp;
     }
 }

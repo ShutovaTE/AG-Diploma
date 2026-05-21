@@ -5,6 +5,7 @@ import com.example.vag.dto.ModerationResult;
 import com.example.vag.model.Artwork;
 import com.example.vag.model.*;
 import com.example.vag.service.*;
+import com.example.vag.repository.CommentRepository;
 import com.example.vag.service.impl.ImageHashService;
 import com.example.vag.util.FileUploadUtil;
 import org.springframework.data.domain.Page;
@@ -41,12 +42,14 @@ public class ArtworkController {
     private final ModerationService moderationService;
     private final ImageHashService imageHashService;
     private final NotificationService notificationService;
+    private final CommentRepository commentRepository;
     private final FileUploadUtil fileUploadUtil;
 
     public ArtworkController(ArtworkService artworkService, CategoryService categoryService,
                              UserService userService, ExhibitionService exhibitionService,
                              ModerationService moderationService, ImageHashService imageHashService,
-                             NotificationService notificationService, FileUploadUtil fileUploadUtil) {
+                             NotificationService notificationService, CommentRepository commentRepository,
+                             FileUploadUtil fileUploadUtil) {
         this.artworkService = artworkService;
         this.categoryService = categoryService;
         this.userService = userService;
@@ -54,6 +57,7 @@ public class ArtworkController {
         this.moderationService = moderationService;
         this.imageHashService = imageHashService;
         this.notificationService = notificationService;
+        this.commentRepository = commentRepository;
         this.fileUploadUtil = fileUploadUtil;
     }
 
@@ -129,12 +133,13 @@ public class ArtworkController {
 
     @GetMapping("/details/{id}")
     public String viewArtwork(@PathVariable("id") Long id, Model model) {
-        Artwork artwork = artworkService.findByIdWithComments(id);
+        Artwork artwork = artworkService.findByIdWithCategories(id)
+                .orElseThrow(() -> new NoSuchElementException("Artwork not found"));
         User currentUser = null;
         try {
             currentUser = userService.getCurrentUser();
         } catch (Exception e) {
-            
+            // ignore
         }
 
         boolean isApproved = Artwork.ArtworkStatus.APPROVED.name().equals(artwork.getStatus());
@@ -145,9 +150,11 @@ public class ArtworkController {
             return "redirect:/auth/access-denied";
         }
 
+        List<Comment> commentsList = commentRepository.findByArtworkOrderByDateCreatedDesc(artwork);
         List<Artwork> similarArtworks = artworkService.findSimilarApprovedArtworks(artwork, 8);
 
         model.addAttribute("artwork", artwork);
+        model.addAttribute("commentsList", commentsList);
         model.addAttribute("similarArtworks", similarArtworks);
         model.addAttribute("isLiked", currentUser != null && artworkService.isLikedByUser(artwork, currentUser));
         model.addAttribute("isAuthenticated", currentUser != null);
@@ -354,6 +361,8 @@ public class ArtworkController {
             BindingResult bindingResult,
             @RequestParam("categoryIds") List<Long> categoryIds,
             @RequestParam(value = "imageFile", required = false) MultipartFile imageFile,
+            @RequestParam(value = "imagePath", required = false) String imagePath,
+            @RequestParam(value = "safeFileName", required = false) String safeFileName,
             @RequestParam(value = "artistComment", required = false) String artistComment,
             Model model) throws IOException {
 
@@ -382,14 +391,23 @@ public class ArtworkController {
             existingArtwork.setArtistComment(artistComment.trim());
         }
 
-        if (imageFile != null && !imageFile.isEmpty()) {
+        // Handle new image from MinIO presigned upload
+        if (imagePath != null && !imagePath.isEmpty() && !imagePath.equals(existingArtwork.getImagePath())) {
+            MultipartFile uploadedFile = fileUploadUtil.getAsMultipartFile(imagePath, safeFileName);
+            existingArtwork.setImagePath(imagePath);
+            // Apply image features for new image
+            artworkService.applyImageFeaturesPublic(existingArtwork, uploadedFile);
+        } else if (imageFile != null && !imageFile.isEmpty()) {
+            // Legacy: handle direct multipart upload if provided
             String fileName = StringUtils.cleanPath(imageFile.getOriginalFilename());
-            String safeFileName = fileName
+            String safeName = fileName
                     .replace(" ", "_")
                     .replaceAll("[^a-zA-Z0-9._-]", "");
-            String relativePath = "artwork-images/" + currentUser.getId() + "/" + safeFileName;
+            String relativePath = "artwork-images/" + currentUser.getId() + "/" + safeName;
             existingArtwork.setImagePath(relativePath);
-            fileUploadUtil.saveFile(currentUser.getId(), safeFileName, imageFile);
+            fileUploadUtil.saveFile(currentUser.getId(), safeName, imageFile);
+            // Apply image features for uploaded image
+            artworkService.applyImageFeaturesPublic(existingArtwork, imageFile);
         }
 
         artworkService.save(existingArtwork);
@@ -478,6 +496,9 @@ public class ArtworkController {
             artwork.setUser(currentUser);
             artwork.setLikes(0);
             artwork.setViews(0);
+
+            // Apply image features (color, histogram, detected objects)
+            artworkService.applyImageFeaturesPublic(artwork, imageFile);
 
             // Сохраняем отчёт ИИ
             artwork.setAiReport(moderationResult.getAiReport());

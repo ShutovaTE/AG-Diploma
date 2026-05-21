@@ -375,7 +375,11 @@ public class RecommendationServiceImpl implements RecommendationService {
      */
     @Override
     public void clearModelCache() {
-        logger.info("clearModelCache вызван. Данный метод устарел, используйте ModelManagementService");
-        retrainModel();
+
+        logger.info(
+                "Модель рекомендаций помечена как устаревшая. "
+                        + "Автоматическое переобучение отключено."
+        );
+
     }
 }

@@ -14,13 +14,13 @@ Deployment_Node(app_server, "Application Server", "Linux/Windows Server") {
     }
 }
 
-Deployment_Node(ml_server, "ML Server", "Linux") {
+Deployment_Node(ml_server, "ML Server", "Linux/Windows") {
     Deployment_Node(python_runtime, "Python Runtime", "Python 3.8+") {
         Container(ml_service, "ML Recommendation Engine", "Python + OpenCLIP + FastAPI", "")
     }
 }
 
-Deployment_Node(storage_server, "Storage Server", "Linux") {
+Deployment_Node(storage_server, "Storage Server", "Linux/Windows") {
     Deployment_Node(minio_docker, "MinIO Container", "Docker") {
         Container(minio_instance, "MinIO Instance", "S3-compatible Storage", "")
     }

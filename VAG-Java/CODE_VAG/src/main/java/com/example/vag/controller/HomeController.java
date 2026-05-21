@@ -3,13 +3,9 @@ package com.example.vag.controller;
 import com.example.vag.model.Artwork;
 import com.example.vag.model.Exhibition;
 import com.example.vag.model.User;
-import com.example.vag.recommendation.dto.RecommendationDTO;
-import com.example.vag.recommendation.service.RecommendationService;
 import com.example.vag.service.ArtworkService;
 import com.example.vag.service.ExhibitionService;
 import com.example.vag.service.UserService;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,13 +22,11 @@ public class HomeController {
     private final ArtworkService artworkService;
     private final ExhibitionService exhibitionService;
     private final UserService userService;
-    private final RecommendationService recommendationService;
 
-    public HomeController(ArtworkService artworkService, ExhibitionService exhibitionService, UserService userService, RecommendationService recommendationService) {
+    public HomeController(ArtworkService artworkService, ExhibitionService exhibitionService, UserService userService) {
         this.artworkService = artworkService;
         this.exhibitionService = exhibitionService;
         this.userService = userService;
-        this.recommendationService = recommendationService;
     }
 
     @GetMapping({"/", "/index"})
@@ -69,17 +63,6 @@ public class HomeController {
             artist.getExhibitions().size();
         });
         model.addAttribute("randomArtists", randomArtists);
-
-        if (authentication != null && authentication.isAuthenticated()) {
-            String username = authentication.getName();
-            User user = userService.findByUsername(username).orElse(null);
-            
-            if (user != null) {
-                List<RecommendationDTO> recommendations = 
-                    recommendationService.getRecommendationsForUser(user.getId(), 5);
-                model.addAttribute("recommendations", recommendations);
-            }
-        }
 
         return "index";
     }

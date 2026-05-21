@@ -48,6 +48,7 @@ public interface ArtworkService {
 
     void rescanArtworkFeatures(Long artworkId);
     void rescanAllArtworkFeatures();
+    void applyImageFeaturesPublic(Artwork artwork, MultipartFile imageFile);
 
     Page<Artwork> searchArtworksByTitle(String title, Pageable pageable);
 }

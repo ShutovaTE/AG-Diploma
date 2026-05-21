@@ -6,6 +6,7 @@ import com.example.vag.recommendation.service.RecommendationService;
 import com.example.vag.repository.*;
 import com.example.vag.service.ArtworkService;
 import com.example.vag.service.ExhibitionService;
+import com.example.vag.service.ImageFeatureAsyncService;
 import com.example.vag.service.ImageFeatureService;
 import com.example.vag.service.ModerationService;
 import com.example.vag.service.NotificationService;
@@ -49,6 +50,7 @@ public class ArtworkServiceImpl implements ArtworkService {
     private final ModerationService moderationService;
     private final ImageHashService imageHashService;
     private final ImageFeatureService imageFeatureService;
+    private final ImageFeatureAsyncService imageFeatureAsyncService;
 
     public ArtworkServiceImpl(ArtworkRepository artworkRepository,
                               CategoryRepository categoryRepository,
@@ -60,7 +62,8 @@ public class ArtworkServiceImpl implements ArtworkService {
                               RecommendationService recommendationService,
                               ModerationService moderationService,
                               ImageHashService imageHashService,
-                              ImageFeatureService imageFeatureService) {
+                              ImageFeatureService imageFeatureService,
+                              ImageFeatureAsyncService imageFeatureAsyncService) {
         this.artworkRepository = artworkRepository;
         this.categoryRepository = categoryRepository;
         this.commentRepository = commentRepository;
@@ -72,6 +75,7 @@ public class ArtworkServiceImpl implements ArtworkService {
         this.moderationService = moderationService;
         this.imageFeatureService = imageFeatureService;
         this.imageHashService = imageHashService;
+        this.imageFeatureAsyncService = imageFeatureAsyncService;
     }
 
     @Override
@@ -100,8 +104,6 @@ public class ArtworkServiceImpl implements ArtworkService {
         artwork.setUser(user);
         artwork.setLikes(0);
         artwork.setViews(0);
-
-        applyImageFeatures(artwork, imageFile);
 
         // Сохраняем отчёт ИИ
         artwork.setAiReport(moderationResult.getAiReport());
@@ -135,6 +137,11 @@ public class ArtworkServiceImpl implements ArtworkService {
         }
 
         Artwork saved = artworkRepository.save(artwork);
+
+        imageFeatureAsyncService.analyzeArtwork(
+                saved.getId(),
+                imageFile
+        );
 
         // Сохраняем хеш
         if (!Artwork.ArtworkStatus.REJECTED.name().equals(saved.getStatus())) {
@@ -320,6 +327,37 @@ public class ArtworkServiceImpl implements ArtworkService {
         } catch (Exception e) {
             System.err.println("Ошибка анализа изображения: " + e.getMessage());
         }
+    }
+
+    public void applyImageFeaturesPublic(Artwork artwork, org.springframework.web.multipart.MultipartFile imageFile) {
+        applyImageFeatures(artwork, imageFile);
+    }
+
+    private void applyImageFeaturesAsync(Artwork artwork, org.springframework.web.multipart.MultipartFile imageFile) {
+        // Save artwork first to get ID for async processing
+        // Then apply features asynchronously in a separate thread
+        Artwork savedArtwork = artwork;
+        
+        // Start background task to apply features without blocking upload
+        Thread backgroundThread = new Thread(() -> {
+            try {
+                // Re-fetch the file or use cached analysis
+                var analysis = imageFeatureService.analyze(imageFile);
+                if (analysis.getAverageRed() != null) {
+                    savedArtwork.setAverageRed(analysis.getAverageRed());
+                    savedArtwork.setAverageGreen(analysis.getAverageGreen());
+                    savedArtwork.setAverageBlue(analysis.getAverageBlue());
+                    savedArtwork.setColorHistogram(analysis.getColorHistogram());
+                    savedArtwork.setDetectedObjects(analysis.getDetectedObjects());
+                    artworkRepository.save(savedArtwork);
+                }
+            } catch (Exception e) {
+                System.err.println("Ошибка асинхронного анализа изображения: " + e.getMessage());
+            }
+        });
+        backgroundThread.setDaemon(true);
+        backgroundThread.setName("ImageFeature-" + artwork.getId());
+        backgroundThread.start();
     }
 
     @Override
@@ -531,9 +569,7 @@ public class ArtworkServiceImpl implements ArtworkService {
     @Override
     public Artwork findByIdWithComments(Long id) {
         Artwork artwork = artworkRepository.findByIdWithComments(id).orElseThrow();
-        artworkRepository.findByIdWithCategories(id).ifPresent(a ->
-                artwork.setCategories(a.getCategories())
-        );
+        // Не присваиваем коллекцию! Просто возвращаем artwork, Hibernate сам загрузит comments
         return artwork;
     }
 
