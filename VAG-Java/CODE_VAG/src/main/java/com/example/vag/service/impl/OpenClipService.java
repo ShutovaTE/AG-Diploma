@@ -55,10 +55,6 @@ public class OpenClipService {
             try {
                 root = objectMapper.readTree(text);
             } catch (Exception ex) {
-                // Try to recover JSON if process printed non-JSON prefixes (logs, warnings)
-                // Iterate over every occurrence of '{' or '[' and try to parse from there —
-                // some Python tracebacks include '[' (e.g. '[Errno 2]') which is not JSON,
-                // so attempt parse for each candidate until one succeeds.
                 List<Integer> candidates = new ArrayList<>();
                 for (int i = 0; i < text.length(); i++) {
                     char c = text.charAt(i);

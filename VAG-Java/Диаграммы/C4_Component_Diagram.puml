@@ -2,8 +2,6 @@
 
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
 
-title Virtual Art Gallery - Spring MVC Web Application Components
-
 Container(web_browser, "Web Browser", "", "")
 
 System_Boundary(spring_app, "Spring MVC Web Application") {
@@ -27,6 +25,9 @@ System_Boundary(spring_app, "Spring MVC Web Application") {
     Component(image_feature_service, "ImageFeatureService", "Service Layer", "Обработка признаков изображений")
     Component(recommendation_service, "RecommendationService", "Service Layer", "Получение рекомендаций от ML-движка")
     Component(yandex_vision_client, "Yandex Vision Client", "External Service Integration", "Клиент для обращения к Yandex Vision API при модерировании")
+    
+    ' ----- НОВЫЙ КОМПОНЕНТ -----
+    Component(open_clip_service, "OpenClipService", "Service Layer", "Формирование цветовой гистограммы, поиск объектов на изображении, извлечение признаков через OpenCLIP")
 
     Component(user_repo, "UserRepository", "Data Access", "Доступ к данным пользователей")
     Component(artwork_repo, "ArtworkRepository", "Data Access", "Доступ к данным произведений")
@@ -35,7 +36,7 @@ System_Boundary(spring_app, "Spring MVC Web Application") {
     Component(comment_repo, "CommentRepository", "Data Access", "Доступ к комментариям")
     Component(like_repo, "LikeRepository", "Data Access", "Доступ к лайкам")
     Component(notification_repo, "NotificationRepository", "Data Access", "Доступ к уведомлениям")
-    Component(image_hash_repo, "ImageHashRepository", "Data Access", "Доступ к хешам изображений")
+    Component(image_hash_repo, "ImageHashRepository", "Data Access", "Доступ к хешам/признакам изображений")
 
     Component(user_model, "User, Role", "Model/Entity", "Сущности пользователя и ролей")
     Component(artwork_model, "Artwork, Category", "Model/Entity", "Сущности произведения и категорий")
@@ -59,10 +60,11 @@ ContainerDb(mysql, "MySQL Database", "", "")
 
 Container_Ext(minio_storage, "MinIO Storage", "", "")
 
-Container_Ext(ml_engine, "ML Recommendation Service", "", "")
+Container_Ext(ml_engine, "ML Recommendation Engine", "", "")
 
 Container_Ext(yandex_vision_api, "Yandex Vision API", "External Image Analysis Service", "")
 
+' ===== СВЯЗИ КОНТРОЛЛЕРОВ =====
 Rel(web_browser, home_controller, "HTTP GET /", "")
 Rel(web_browser, auth_controller, "HTTP /login /register", "")
 Rel(web_browser, artwork_controller, "HTTP /artworks", "")
@@ -73,6 +75,7 @@ Rel(web_browser, admin_controller, "HTTP /admin", "")
 Rel(web_browser, upload_controller, "HTTP POST /upload", "")
 Rel(web_browser, recommendation_controller, "HTTP /api/recommendations", "")
 
+' ===== КОНТРОЛЛЕРЫ → СЕРВИСЫ =====
 Rel(auth_controller, user_service, "использует")
 Rel(auth_controller, custom_user_details, "использует")
 Rel(artwork_controller, artwork_service, "использует")
@@ -84,18 +87,27 @@ Rel(upload_controller, artwork_service, "использует")
 Rel(upload_controller, minio_client, "использует")
 Rel(recommendation_controller, recommendation_service, "использует")
 
+' ===== СЕРВИСЫ → ДРУГИЕ СЕРВИСЫ / РЕПОЗИТОРИИ =====
 Rel(user_service, user_repo, "использует")
 Rel(artwork_service, artwork_repo, "использует")
 Rel(artwork_service, image_feature_service, "использует")
 Rel(artwork_service, notification_service, "использует")
+Rel(artwork_service, open_clip_service, "использует (извлечение признаков при загрузке)")
 Rel(category_service, category_repo, "использует")
 Rel(exhibition_service, exhibition_repo, "использует")
 Rel(moderation_service, artwork_repo, "использует")
 Rel(notification_service, notification_repo, "использует")
 Rel(image_feature_service, image_hash_repo, "использует")
-Rel(recommendation_service, ml_client, "использует")
+
+' ----- НОВЫЕ СВЯЗИ ДЛЯ OpenClipService -----
+Rel(recommendation_service, open_clip_service, "использует (получение признаков для рекомендаций)")
+Rel(open_clip_service, ml_client, "вызывает ML Engine для сложной обработки")
+Rel(open_clip_service, image_hash_repo, "сохраняет/читает гистограммы и признаки")
+
+Rel(recommendation_service, ml_client, "использует (прямой вызов)")
 Rel(moderation_service, yandex_vision_client, "использует")
 
+' ===== РЕПОЗИТОРИИ → БАЗА ДАННЫХ =====
 Rel(user_repo, mysql, "читает/пишет")
 Rel(artwork_repo, mysql, "читает/пишет")
 Rel(category_repo, mysql, "читает/пишет")
@@ -105,10 +117,12 @@ Rel(like_repo, mysql, "читает/пишет")
 Rel(notification_repo, mysql, "читает/пишет")
 Rel(image_hash_repo, mysql, "читает/пишет")
 
+' ===== КЛИЕНТЫ ВНЕШНИХ СИСТЕМ =====
 Rel(minio_client, minio_storage, "S3-compatible API")
 Rel(ml_client, ml_engine, "HTTP JSON запросы")
 Rel(yandex_vision_client, yandex_vision_api, "HTTP JSON запросы")
 
+' ===== РЕПОЗИТОРИИ → МОДЕЛИ =====
 Rel(user_repo, user_model, "работает с")
 Rel(artwork_repo, artwork_model, "работает с")
 Rel(exhibition_repo, exhibition_model, "работает с")
