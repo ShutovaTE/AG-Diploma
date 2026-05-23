@@ -1,0 +1,150 @@
+@startuml
+' Диаграммы последовательности модуля рекомендаций Virtual Art Gallery
+' Учтены: гибридные рекомендации (SVD + контентная фильтрация), OpenCLIP, pHash
+scale 2.0
+
+title Диаграмма последовательности модуля рекомендаций VAG
+
+' ============================================================
+' Сценарий 1: Получение персонализированных рекомендаций (Художник)
+' ============================================================
+== Сценарий 1: Персонализированные рекомендации ==
+
+actor "Художник" as Artist
+participant "WebBrowser" as Browser
+participant "ArtworkController" as AC
+participant "RecommendationService" as RS
+participant "Python\n(recommendation_engine.py)" as PyRec
+participant "ModelCache\n(.pkl)" as Cache
+database "MySQL" as DB
+
+Artist -> Browser: Открывает /artwork/list?mode=recommendations
+Browser -> AC: GET /artwork/list (mode=recommendations)
+activate AC
+
+AC -> RS: getRecommendationsForUser(userId, topN=12)
+activate RS
+
+RS -> RS: isRecommendationSystemAvailable()
+RS -> Cache: check if model exists and valid
+Cache --> RS: model ready
+
+RS -> PyRec: запуск python recommendation_engine.py\n--user_id X --extended
+activate PyRec
+PyRec -> Cache: load_model()
+Cache --> PyRec: svd, content_sim, artworks_df
+PyRec -> DB: запрос данных (artworks, likes, comments)
+DB --> PyRec: данные
+PyRec -> PyRec: hybrid_recommendations(alpha=0.6)\ncollab + content scores
+PyRec -> PyRec: select top-50 recommendations
+PyRec --> RS: JSON {success, recommendations[]}
+deactivate PyRec
+
+RS -> RS: parseRecommendations()\nselectRandomRecommendations(12)
+RS --> AC: List<RecommendationDTO>
+deactivate RS
+
+AC -> Browser: возвращает страницу artwork/list.html\nс 12 рандомизированными рекомендациями
+deactivate AC
+Browser -> Artist: отображение карточек работ с % совпадения
+
+' ============================================================
+' Сценарий 2: Просмотр похожих работ (с использованием OpenCLIP и pHash)
+' ============================================================
+== Сценарий 2: Похожие работы (визуально / контент) ==
+
+actor "Посетитель" as Guest
+participant "WebBrowser" as Browser2
+participant "ArtworkController" as AC2
+participant "ArtworkService" as AS
+participant "ImageHashService" as IHS
+participant "OpenClipService" as OCS
+participant "Python\n(openclip_extractor.py)" as PyClip
+database "MySQL" as DB2
+
+Guest -> Browser2: Открывает /artwork/details/{id}
+Browser2 -> AC2: GET /artwork/details/{id}
+activate AC2
+
+AC2 -> AS: findSimilarApprovedArtworks(artwork, 8)
+activate AS
+
+alt Использование pHash для визуально похожих
+    AS -> IHS: findSimilarArtwork(file, excludeArtworkId)
+    activate IHS
+    IHS -> DB2: получить pHash всех одобренных работ
+    DB2 --> IHS: хеши
+    IHS -> IHS: calculateHammingDistance\nсравнение с текущим изображением
+    IHS --> AS: SimilarArtworkInfo (если сходство > порога)
+    deactivate IHS
+end
+
+alt Использование OpenCLIP тегов для контентного сходства
+    AS -> OCS: detectCategories(artwork.imageFile)
+    activate OCS
+    OCS -> PyClip: python openclip_extractor.py --image path
+    activate PyClip
+    PyClip -> PyClip: classify image -> tags, avg_color
+    PyClip --> OCS: JSON {tags, avg_color}
+    deactivate PyClip
+    OCS --> AS: List<String> tags
+    deactivate OCS
+    AS -> DB2: найти работы с пересекающимися тегами
+    DB2 --> AS: список работ
+end
+
+AS --> AC2: List<Artwork> similarArtworks
+deactivate AS
+
+AC2 -> Browser2: возвращает страницу details.html\nс блоком "Похожие публикации"
+deactivate AC2
+Browser2 -> Guest: отображение похожих работ
+
+' ============================================================
+' Сценарий 3: Переобучение модели (Администратор)
+' ============================================================
+== Сценарий 3: Переобучение модели ==
+
+actor "Администратор" as Admin
+participant "WebBrowser" as Browser3
+participant "RecommendationController" as RC
+participant "ModelManagementService" as MMS
+participant "Python\n(model_trainer.py)" as PyTrain
+database "MySQL" as DB3
+participant "ModelCache" as Cache3
+
+Admin -> Browser3: Нажимает "Переобучить модель"\nна странице /artwork/list?mode=recommendations
+Browser3 -> RC: POST /api/recommendations/retrain
+activate RC
+
+RC -> MMS: retrainModel()
+activate MMS
+
+MMS -> MMS: проверка trainingStatus != IN_PROGRESS
+MMS -> MMS: запуск нового потока performModelTraining()
+
+MMS -> PyTrain: запуск python model_trainer.py --force
+activate PyTrain
+PyTrain -> DB3: загрузка данных (artworks, likes, comments)
+DB3 --> PyTrain: данные
+PyTrain -> PyTrain: prepare_interactions()\nbuild_content_features()\ntrain_svd_model()
+PyTrain -> Cache3: save_model(svd, content_sim, artworks_df, interactions_df)
+Cache3 --> PyTrain: сохранено
+PyTrain -> Cache3: save_metadata() и training.log
+PyTrain --> MMS: exitCode = 0
+deactivate PyTrain
+
+MMS -> MMS: обновить статус COMPLETED, lastTrainingTime
+MMS --> RC: success=true
+deactivate MMS
+
+RC --> Browser3: JSON {success, message, task_status}
+deactivate RC
+Browser3 -> Admin: уведомление "Переобучение запущено"
+
+note right of MMS
+  Администратор может проверить статус
+  через GET /api/recommendations/training-status
+end note
+
+@enduml

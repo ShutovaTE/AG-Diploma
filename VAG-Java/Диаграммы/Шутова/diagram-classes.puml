@@ -1,0 +1,208 @@
+@startuml
+!theme plain
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+skinparam class {
+    BackgroundColor White
+    BorderColor Black
+    ArrowColor Black
+}
+
+title Диаграмма классов модуля рекомендаций 
+
+' ============================================
+' Сущности (только нужные)
+' ============================================
+class Artwork {
+    id, title, imagePath, likes
+    averageRed, averageGreen, averageBlue
+    colorHistogram, detectedObjects
+    similarArtworkId
+}
+
+class Like {
+    user_id, artwork_id
+}
+
+Artwork "1" -- "many" Like
+
+' ============================================
+' Repository (доступ к данным)
+' ============================================
+interface ArtworkRepository {
+    findApprovedArtworks()
+    findApprovedArtworksExcept()
+    findByIdWithCategories()
+    updateSimilarArtworkFields()
+}
+
+interface LikeRepository {
+    findAll()
+}
+
+' ============================================
+' Java-сервисы (ядро рекомендаций)
+' ============================================
+interface RecommendationService {
+    getRecommendationsForUser()
+    isRecommendationSystemAvailable()
+    retrainModel()
+}
+
+class RecommendationServiceImpl {
+    - pythonExecutable, scriptPath
+    - modelManagementService
+    + getRecommendationsForUser()
+    - getRecommendationsFromPythonExtended()
+    - parseRecommendations()
+    - selectRandomRecommendations()
+}
+
+class ModelManagementService {
+    - isModelReady, trainingStatus
+    + initializeModel()
+    + retrainModel()
+    + isModelReady()
+    + getTrainingStatus()
+    - performModelTraining()
+}
+
+enum TrainingStatus {
+    IDLE
+    IN_PROGRESS
+    COMPLETED
+    ERROR
+}
+
+interface ArtworkService {
+    getRecommendationsForUser()
+    findSimilarApprovedArtworks()
+    applyImageFeaturesPublic()
+    rescanArtworkFeatures()
+    likeArtwork()
+}
+
+class ImageFeatureService {
+    - visionService
+    + analyze()
+}
+
+class OpenClipService {
+    + detectCategories()
+}
+
+class ImageHashService {
+    + saveHash()
+    + findDuplicateByMd5()
+    + findSimilarArtwork()
+}
+
+' ============================================
+' DTO
+' ============================================
+class RecommendationDTO {
+    artworkId, title, author
+    categories, likes, score
+}
+
+class SimilarArtworkInfo {
+    artworkId, title, similarityPercent
+}
+
+' ============================================
+' Контроллеры (только для рекомендаций)
+' ============================================
+class RecommendationController {
+    getRecommendationsForCurrentUser()
+    getStatus()
+    retrainModel()
+    getTrainingStatus()
+}
+
+class ArtworkController {
+    listArtworks(mode="recommendations")
+    viewArtwork()  // показывает похожие работы
+}
+
+' ============================================
+' Python модуль
+' ============================================
+package "ML-Recommendation (Python)" {
+    class recommendation_engine <<Python>> {
+        get_db_connection()
+        load_data_from_db()
+        prepare_interactions()
+        build_content_features()
+        get_content_recommendations()
+        train_svd_model()
+        hybrid_recommendations()
+        get_recommendations_for_user_extended()
+        is_cache_valid()
+        save_model()
+        load_model()
+    }
+
+    class SimpleSVD <<Python>> {
+        fit()
+        predict()
+    }
+
+    class model_trainer <<Python>> {
+        train_and_save_model()
+        backup_old_model()
+        save_metadata()
+    }
+
+    class openclip_extractor <<Python>> {
+        load_model()
+        classify()
+    }
+}
+
+' ============================================
+' ЗАВИСИМОСТИ (все явные связи)
+' ============================================
+
+' --- Java → Python
+RecommendationServiceImpl ..> recommendation_engine : выполняет
+ModelManagementService ..> model_trainer : выполняет
+OpenClipService ..> openclip_extractor : выполняет
+
+' --- Внутри Java
+RecommendationServiceImpl --> ModelManagementService
+RecommendationController --> RecommendationService
+RecommendationController --> ModelManagementService
+ArtworkController --> ArtworkService
+ArtworkController --> RecommendationService
+ArtworkService --> RecommendationService
+ArtworkService --> ImageFeatureService
+ArtworkService --> OpenClipService
+ArtworkService --> ImageHashService
+ArtworkService --> ArtworkRepository
+ArtworkService --> LikeRepository
+
+' --- Зависимости от DTO
+RecommendationServiceImpl ..> RecommendationDTO : создаёт
+ImageHashService ..> SimilarArtworkInfo : возвращает
+RecommendationController ..> RecommendationDTO : использует
+ArtworkController ..> RecommendationDTO : использует
+ArtworkController ..> SimilarArtworkInfo : использует
+
+' --- Сущности используются сервисами и репозиториями
+ArtworkRepository ..> Artwork
+LikeRepository ..> Like
+ArtworkService ..> Artwork
+ArtworkService ..> Like
+ImageFeatureService ..> Artwork : обновляет поля (цвет, гистограмма)
+ImageHashService ..> Artwork : читает/сохраняет хеши
+
+' --- Рекомендации строятся на основе данных из Artwork и Like
+RecommendationDTO --> Artwork : ссылается на artworkId
+recommendation_engine ..> Artwork : загружает данные из БД
+recommendation_engine ..> Like : загружает лайки
+
+' --- Python-скрипты
+model_trainer ..> recommendation_engine : импортирует и использует
+recommendation_engine ..> SimpleSVD : использует
+
+@enduml

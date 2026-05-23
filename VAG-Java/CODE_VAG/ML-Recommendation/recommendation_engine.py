@@ -64,8 +64,8 @@ def get_db_connection():
             host='localhost',
             port=3306,
             database='vag1',
-            user='root',  # Замените на вашего пользователя
-            password='root'  # Замените на ваш пароль
+            user='root',  
+            password='root'  
         )
         return connection
     except Error as e:
