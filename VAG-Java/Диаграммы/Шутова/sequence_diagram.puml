@@ -29,7 +29,7 @@ RS -> RS: isRecommendationSystemAvailable()
 RS -> Cache: check if model exists and valid
 Cache --> RS: model ready
 
-RS -> PyRec: запуск python recommendation_engine.py\n--user_id X --extended
+RS -> PyRec: запуск python recommendation_engine.py\nuser_id X extended
 activate PyRec
 PyRec -> Cache: load_model()
 Cache --> PyRec: svd, content_sim, artworks_df
